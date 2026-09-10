@@ -6,12 +6,31 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 1 (Current)
+### Phase 2 (Current)
+- Real QR Code generation engine (client-side, `qrcode` library)
+- Supported QR types: **URL**, **WiFi**, **Phone**, **Email**, **WhatsApp**, **vCard**, **Text**
+- Local QR generation — your data never leaves your browser
+- Real-time preview as you type
+- Customization: size (256–1024px), margin, foreground & background colors, error correction level (L/M/Q/H)
+- **Download PNG** and **Download SVG** exports
+- **Copy content** (URL, WiFi data, vCard, etc.)
+- Reset form & customization
+- Per-type Zod validation with clear, accessible inline errors
+- URL type auto-prepends `https://` when protocol is omitted
+- WiFi output compatible with standard QR readers (special-char escaping, open networks, hidden SSID)
+- vCard generation with CRLF line endings and proper escaping
+- WhatsApp links with normalized numbers and URL-encoded messages
+- Unicode support (French, Arabic, English, emojis)
+- Direct links: `/create?type=url`, `/create?type=wifi`, etc.
+- Unit tests for all QR data generators
+- Offline-ready architecture
+
+### Phase 1
 - Modern, responsive UI (mobile-first)
 - Light/Dark theme with system detection
 - Internationalization (FR, EN, AR with RTL support)
 - Dashboard with stats overview
-- QR Code creation wizard (type selection UI)
+- QR Code creation wizard (type selection)
 - QR Code list management
 - PWA with service worker & offline shell
 - SEO optimized (Open Graph, metadata)
@@ -19,13 +38,13 @@ Create, customize and manage QR Codes from one simple, free application.
 - TypeScript strict mode
 
 ### Upcoming Phases
-- Real QR Code generation (static + dynamic)
-- QR Code customization (colors, logos, frames)
+- Dynamic QR codes
+- QR Code logos & advanced styles (Rounded, Dots)
 - Supabase authentication
 - Scan tracking & analytics
 - IndexedDB offline sync
 - Templates system
-- QR Code download (PNG, SVG, PDF)
+- Public QR redirect API
 
 ## Tech Stack
 
@@ -40,6 +59,8 @@ Create, customize and manage QR Codes from one simple, free application.
 | PostgreSQL | Database (via Supabase) |
 | Zod | Schema validation |
 | React Hook Form | Form management |
+| qrcode | Client-side QR Code generation |
+| Vitest | Unit testing |
 | Zustand | Global state (minimal) |
 | TanStack Query | Server state management |
 | PWA | Service Worker, manifest, offline support |
@@ -73,6 +94,12 @@ src/
 ├── features/               # Feature-specific modules
 │   ├── dashboard/
 │   └── qr/
+│       ├── components/      # QRType cards, forms, preview, customizer, download
+│       │   └── forms/       # URL, WiFi, Phone, Email, WhatsApp, vCard, Text forms
+│       ├── lib/             # qr-generator, qr-renderer, qr-download, qr-clipboard
+│       ├── __tests__/       # Unit tests
+│       ├── types.ts         # Form values + customization types
+│       └── schemas.ts       # Per-type Zod schemas
 ├── hooks/                  # Custom React hooks
 ├── i18n/                   # Internationalization
 │   ├── config.ts
@@ -87,6 +114,27 @@ src/
 ├── types/                  # TypeScript types
 └── validations/            # Zod schemas
 ```
+
+## QR Generator
+
+Supported QR types:
+
+- **URL** — website links with auto `https://` when protocol is omitted
+- **WiFi** — WPA/WPA2, WEP, or open networks; supports hidden SSID and special-character escaping
+- **Phone** — normalized `tel:` links (spaces/dashes removed, international prefix kept)
+- **Email** — `mailto:` with URL-encoded subject and body
+- **WhatsApp** — `wa.me` links with normalized numbers and URL-encoded messages
+- **vCard** — contact cards (FN, N, ORG, TITLE, TEL, EMAIL, URL, ADR, NOTE) with CRLF and escaping
+- **Text** — free-form Unicode text (French, Arabic, English, emojis)
+
+### Generator features
+
+- **Local QR generation** — generated entirely in your browser, no data is sent to any server
+- **PNG export** — download `qr-manager-{type}-{timestamp}.png`
+- **SVG export** — true vector SVG, download `qr-manager-{type}-{timestamp}.svg`
+- **Customization** — size (256/512/768/1024px), margin, foreground/background colors, error correction (L/M/Q/H)
+- **Privacy** — your data stays in your browser; static QR codes are never uploaded
+- **Offline-ready** — generation works without a network connection
 
 ## Getting Started
 
@@ -138,6 +186,16 @@ npm run start
 ```bash
 npm run lint
 ```
+
+### Tests
+
+```bash
+npm test
+```
+
+### Creating a QR Code
+
+Navigate to `/create`, pick a type, fill in the fields — the QR code updates live. Customize colors, size, and error correction, then download PNG or SVG. You can also deep-link to a specific type: `/create?type=whatsapp`.
 
 ## PWA
 

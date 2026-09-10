@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { CreateQRContent } from "@/features/qr/create-qr-content";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function CreateQRPage() {
-  return <CreateQRContent />;
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center p-12 text-sm text-muted-foreground">Loading...</div>}>
+      <CreateQRContent />
+    </Suspense>
+  );
 }
