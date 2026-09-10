@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { RotateCcw, Settings2, QrCode, Shield, Save, Lock } from "lucide-react";
 import { useI18n } from "@/i18n/provider";
 import { useToast } from "@/lib/toast-store";
-import { qrRepository } from "./storage";
+import { qrService } from "./service/qr-service";
 import type { QRCodeRecord } from "./storage";
 import { getDefaultName } from "./storage";
 import {
@@ -124,7 +124,7 @@ export function CreateQRContent() {
     if (!editParam || loadedRef.current) return;
     let cancelled = false;
     (async () => {
-      const record = await qrRepository.get(editParam).catch(() => null);
+      const record = await qrService.get(editParam).catch(() => null);
       if (cancelled) return;
       if (record) {
         loadedRef.current = true;
@@ -168,13 +168,13 @@ export function CreateQRContent() {
           isDynamic: false,
           updatedAt: new Date().toISOString(),
         };
-        await qrRepository.update(updated);
+        await qrService.update(updated);
         showToast({ title: isEditing ? t("create.saved") : t("create.saved"), variant: "success" });
         setSaveState("saved");
         setShowSaveDialog(false);
         router.push(`/qrs/${updated.id}`);
       } else {
-        const created = await qrRepository.create({
+        const created = await qrService.create({
           name,
           type: selectedType,
           values,

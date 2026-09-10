@@ -1,4 +1,3 @@
-import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type {
   CreateQRCodeRecord,
   QRCodeRecord,
@@ -6,64 +5,22 @@ import type {
 } from "./types";
 import type { QRType } from "@/types";
 import { getDefaultValues } from "../types";
+import { DB_STORE, createRecord, getDB } from "./db";
 
-export const DB_NAME = "qr-manager";
-export const DB_STORE = "qr-codes";
-export const DB_VERSION = 1;
-
-interface QRManagerDB extends DBSchema {
-  "qr-codes": {
-    key: string;
-    value: QRCodeRecord;
-  };
-}
-
-let dbPromise: Promise<IDBPDatabase<QRManagerDB>> | null = null;
-
-function getDB(): Promise<IDBPDatabase<QRManagerDB>> {
-  if (typeof indexedDB === "undefined") {
-    return Promise.reject(new Error("IndexedDB is not available in this environment"));
-  }
-  if (!dbPromise) {
-    dbPromise = openDB<QRManagerDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains(DB_STORE)) {
-          db.createObjectStore(DB_STORE, { keyPath: "id" });
-        }
-      },
-    });
-  }
-  return dbPromise;
-}
-
-function generateId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `qr-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-export function createRecord(
-  input: CreateQRCodeRecord
-): QRCodeRecord {
-  const now = new Date().toISOString();
-  return {
-    id: input.id ?? generateId(),
-    name: input.name.trim(),
-    type: input.type,
-    values: input.values,
-    customization: input.customization,
-    isDynamic: input.isDynamic ?? false,
-    favorite: input.favorite ?? false,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
+export { DB_NAME, DB_STORE, DB_VERSION } from "./db";
 
 export class IndexedDBQRRepository implements QRRepository {
   async create(input: CreateQRCodeRecord): Promise<QRCodeRecord> {
     const db = await getDB();
-    const record = createRecord(input);
+    const record = createRecord({
+      id: input.id,
+      name: input.name,
+      type: input.type,
+      values: input.values,
+      customization: input.customization,
+      isDynamic: input.isDynamic,
+      favorite: input.favorite,
+    });
     await db.add(DB_STORE, record);
     return record;
   }
@@ -96,6 +53,13 @@ export class IndexedDBQRRepository implements QRRepository {
   async clear(): Promise<void> {
     const db = await getDB();
     await db.clear(DB_STORE);
+  }
+
+  async saveAll(records: QRCodeRecord[]): Promise<void> {
+    const db = await getDB();
+    for (const record of records) {
+      await db.put(DB_STORE, record);
+    }
   }
 }
 

@@ -3,6 +3,7 @@
 import { useSidebarStore } from "@/hooks";
 import { Logo } from "@/components/logo";
 import { OnlineIndicator } from "@/components/online-indicator";
+import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -24,7 +25,10 @@ export function Header() {
         </Button>
         <Logo size="sm" showText={false} />
       </div>
-      <OnlineIndicator />
+      <div className="flex items-center gap-2">
+        <OnlineIndicator />
+        <UserMenu />
+      </div>
 
       <Sheet open={isOpen} onOpenChange={close}>
         <SheetContent side="left" className="w-64 p-0">

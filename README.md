@@ -6,7 +6,18 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 3 (Current)
+### Phase 4 (Current)
+- **Accounts (optional)** — email/password sign up, sign in, password reset via Supabase Auth (`/login`, `/register`, `/forgot-password`, `/reset-password`). The app remains **fully usable without an account** — auth is purely additive.
+- **Cloud sync** — QR Codes stored in an IndexedDB-first cache that syncs to Postgres (`qr_codes` + `profiles` tables with row-level security) on every change, when online and signed in
+- **Offline queue** — mutations made offline are queued locally and replayed in order on reconnect; edits coalesce (create+update/delete collapse)
+- **Conflict resolution** — newest `updated_at` wins when a record changed on both sides
+- **First-login sync dialog** — on first sign-in, choose to push local codes to the account, keep local only, or cancel
+- **Sync status in app** — pending count badge, online indicator, "Load changes" action in the header, user menu with sign out
+- **Profile settings** — display name editing, Data & Privacy card, auth-aware Account card
+- **Server-side session middleware** — cookie refresh + guarding auth pages from signed-in users
+- **Unit tests** — for cloud mappers/schemas, conflict resolution, sync queue coalescing, and the sync service (offline queueing, replay, logout-keeps-local)
+
+### Phase 3
 - **Local QR library** — QR Codes stored in IndexedDB on this device (no server)
 - **`/qrs` library** — search, filter by status (All/Static/Favorites), filter by type, sort (recently updated/created, name A–Z/Z–A)
 - **`/qrs/[id]` detail page** — preview on actual background, view content, download PNG/SVG, copy content, share, favorite, edit, duplicate, delete
@@ -55,7 +66,6 @@ Create, customize and manage QR Codes from one simple, free application.
 ### Upcoming Phases
 - Dynamic QR codes
 - QR Code logos & advanced styles (Rounded, Dots)
-- Supabase authentication
 - Scan tracking & analytics
 - Templates system
 - Public QR redirect API
@@ -70,6 +80,8 @@ Create, customize and manage QR Codes from one simple, free application.
 | shadcn/ui + Base UI | Accessible component library |
 | Lucide React | Icon library |
 | IndexedDB (`idb`) | Local persistence (My QR Codes) |
+| Supabase | Auth (email/password) + Postgres with RLS |
+| Zustand | Lightweight client state (sync status) |
 | Zod | Schema validation |
 | qrcode | Client-side QR Code generation |
 | Vitest | Unit testing |
@@ -109,7 +121,10 @@ src/
 │       │   ├── library/     # QR card, skeleton, empty state
 │       │   └── detail/      # QR detail page content
 │       ├── hooks/           # use-qrs, use-qr-preview
-│       ├── storage/         # QRCodeRecord, IndexedDB repository, backup, utils
+│       ├── storage/         # QRCodeRecord, IndexedDB repository, sync queue DB, backup, utils
+│       ├── cloud/           # Supabase repository, mappers, row validation
+│       ├── sync/            # sync queue store, conflict resolution, sync engine
+│       ├── service/         # qr-service orchestration (local cache + cloud + queue)
 │       ├── lib/             # qr-generator, qr-renderer, qr-download, qr-clipboard
 │       ├── __tests__/       # Unit tests
 │       ├── types.ts         # Form values + customization types
@@ -121,6 +136,7 @@ src/
 │   └── provider.tsx
 ├── lib/                    # Utilities & configurations
 │   ├── utils.ts
+│   ├── auth/               # AuthProvider, use-auth, schemas/errors
 │   ├── supabase/
 │   ├── theme-provider.tsx
 │   └── site-config.ts
@@ -157,7 +173,7 @@ Supported QR types:
 - Node.js 18+
 - npm or yarn
 
-No database or external services required — everything runs locally in the browser.
+No external services are **required** — everything runs locally in the browser. Supabase (Auth + Postgres) is optional and only enables accounts + cross-device sync.
 
 ### Installation
 
@@ -169,6 +185,20 @@ cd qr-manager
 # Install dependencies
 npm install
 ```
+
+### Supabase setup (optional)
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Copy `.env.example` to `.env.local` and fill in:
+
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your-project-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   ```
+
+3. Apply the migrations in `supabase/migrations/` (creates `profiles` and `qr_codes` tables with row-level security).
+
+Without this config the app still works fully locally, in anonymous mode.
 
 ### Development
 
@@ -202,6 +232,13 @@ npm test
 Navigate to `/create`, pick a type, fill in the fields — the QR code updates live. Customize colors, size, and error correction, then download PNG or SVG. You can also deep-link to a specific type: `/create?type=whatsapp`.
 
 Click **Save QR** to name and store it locally, or open an existing code for editing via `/create?edit=<id>`.
+
+### Accounts & Sync
+
+- **Sign up / Sign in** (`/login`, `/register`) — email/password. Password reset via `/forgot-password`.
+- **First sign-in** — choose to push the current local codes to your account, keep them local only, or cancel.
+- **Sync** — when online and signed in, every change is written to your account instantly; offline changes are queued and replayed on reconnect. Pending count is shown in the header.
+- **Signed out** — everything stays in IndexedDB on this device; data is never deleted.
 
 ### Managing QR Codes
 

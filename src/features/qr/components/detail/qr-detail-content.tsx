@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { qrRepository } from "@/features/qr/storage";
+import { qrService } from "@/features/qr/service/qr-service";
 import type { QRCodeRecord } from "@/features/qr/storage";
 import { useQRContent, useQRPreviewDataUrl, useQRTypeName } from "@/features/qr/hooks/use-qr-preview";
 import { downloadPNG, downloadSVG } from "@/features/qr/lib/qr-download";
@@ -44,7 +44,7 @@ export function QRDetailContent() {
     let cancelled = false;
     (async () => {
       try {
-        const data = await qrRepository.get(id);
+        const data = await qrService.get(id);
         if (cancelled) return;
         if (!data) {
           setNotFound(true);
@@ -131,13 +131,13 @@ export function QRDetailContent() {
   };
 
   const handleToggleFavorite = async () => {
-    const updated = await qrRepository.update({ ...record, favorite: !record.favorite });
+    const updated = await qrService.update({ ...record, favorite: !record.favorite });
     setRecord(updated);
   };
 
   const handleDuplicate = async () => {
     const copy = duplicateRecord(record);
-    const created = await qrRepository.create({
+    const created = await qrService.create({
       id: copy.id,
       name: copy.name,
       type: copy.type,
@@ -151,7 +151,7 @@ export function QRDetailContent() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
-      await qrRepository.delete(record.id);
+      await qrService.deleteRecord(record.id);
       showToast({ title: t("library.deleted") });
       router.push("/qrs");
     } catch {

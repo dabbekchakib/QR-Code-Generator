@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +10,11 @@ import { useTheme } from "@/lib/theme-provider";
 import { useI18n } from "@/i18n/provider";
 import { locales, localeNames } from "@/i18n/config";
 import { useQRs } from "@/features/qr/hooks/use-qrs";
-import { qrRepository } from "@/features/qr/storage";
+import { qrService } from "@/features/qr/service/qr-service";
+import { useAuth } from "@/lib/auth/use-auth";
 import { useToast } from "@/lib/toast-store";
-import { Moon, Sun, Monitor, Globe, QrCode, Shield, Palette, Download, Upload, Trash2, HardDrive } from "lucide-react";
+import { ProfileForm } from "./profile-form";
+import { Moon, Sun, Monitor, Globe, QrCode, Palette, Download, Upload, Trash2, HardDrive, User, Key } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -37,6 +40,7 @@ function exportBackup(records: unknown[], filename: string) {
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { locale, setLocale, t } = useI18n();
+  const { status, user } = useAuth();
   const { records, refresh } = useQRs();
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,7 +85,7 @@ export default function SettingsPage() {
       let count = 0;
       for (const record of backup.qrCodes) {
         const parsed = qrRecordSchema.parse(record);
-        await qrRepository.create({
+        await qrService.create({
           id: parsed.id,
           name: parsed.name,
           type: parsed.type,
@@ -113,7 +117,7 @@ export default function SettingsPage() {
   const handleClearAll = async () => {
     setClearing(true);
     try {
-      await qrRepository.clear();
+      await qrService.clearAll();
       await refresh();
       setClearOpen(false);
       showToast({ title: t("settings.localData.cleared"), variant: "success" });
@@ -239,30 +243,68 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Account */}
+      {/* Profile */}
+      {status === "authenticated" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <User className="size-4 text-muted-foreground" />
+              {t("profile.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{t("profile.description")}</p>
+            <ProfileForm />
+            <Separator />
+            <div>
+              <p className="text-sm font-medium">{t("profile.emailLabel")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{user?.email}</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <User className="size-4 text-muted-foreground" />
+              {t("settings.account")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.account")}</p>
+                <p className="text-xs text-muted-foreground">{t("settings.notConnected")}</p>
+              </div>
+              <Link href="/login" passHref legacyBehavior>
+                <Button variant="outline" size="sm">{t("common.login")}</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Data & Privacy */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Shield className="size-4 text-muted-foreground" />
-            {t("settings.account")}
+            <Key className="size-4 text-muted-foreground" />
+            {t("privacy.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">{t("privacy.description")}</p>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">{t("settings.account")}</p>
-              <p className="text-xs text-muted-foreground">{t("settings.notConnected")}</p>
+              <p className="text-sm font-medium">{t("privacy.deleteAccountTitle")}</p>
+              <p className="text-xs text-muted-foreground">{t("privacy.deleteAccountDesc")}</p>
             </div>
-            <Button variant="outline" size="sm">{t("settings.soon")}</Button>
+            <Badge variant="secondary">{t("privacy.comingSoon")}</Badge>
           </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Authentication</p>
-              <p className="text-xs text-muted-foreground">{t("settings.accountDesc")}</p>
-            </div>
-            <Badge variant="secondary">{t("settings.soon")}</Badge>
-          </div>
+          <Button variant="outline" size="sm" disabled>
+            <Trash2 className="size-4" />
+            {t("privacy.deleteAccountTitle")}
+          </Button>
         </CardContent>
       </Card>
 

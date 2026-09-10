@@ -17,7 +17,7 @@ import { QRGridSkeleton } from "./components/library/qr-skeleton";
 import { QRCard } from "./components/library/qr-card";
 import { useQRs } from "@/features/qr/hooks/use-qrs";
 import { filterAndSortRecords, duplicateRecord } from "@/features/qr/storage/utils";
-import { qrRepository } from "@/features/qr/storage";
+import { qrService } from "@/features/qr/service/qr-service";
 import type { QRCodeRecord } from "@/features/qr/storage";
 import type { QRSortOption, QRStatusFilter } from "@/features/qr/storage/types";
 import type { QRType } from "@/types";
@@ -90,7 +90,7 @@ export function QRListContent() {
       for (const record of backup.qrCodes) {
         const { qrRecordSchema } = await import("@/features/qr/storage/backup");
         const parsed = qrRecordSchema.parse(record);
-        await qrRepository.create({
+        await qrService.create({
           id: undefined,
           name: parsed.name,
           type: parsed.type,
@@ -121,13 +121,13 @@ export function QRListContent() {
   const handleToggleFavorite = async (id: string) => {
     const record = records.find((r) => r.id === id);
     if (!record) return;
-    await qrRepository.update({ ...record, favorite: !record.favorite });
+    await qrService.update({ ...record, favorite: !record.favorite });
     await refresh();
   };
 
   const handleDuplicate = async (record: QRCodeRecord) => {
     const copy = duplicateRecord(record);
-    await qrRepository.create({
+    await qrService.create({
       id: copy.id,
       name: copy.name,
       type: copy.type,
@@ -146,7 +146,7 @@ export function QRListContent() {
     if (!pendingDelete) return;
     setDeleting(true);
     try {
-      await qrRepository.delete(pendingDelete.id);
+      await qrService.deleteRecord(pendingDelete.id);
       showToast({ title: t("library.deleted") });
       setPendingDelete(null);
       await refresh();

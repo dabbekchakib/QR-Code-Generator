@@ -13,18 +13,20 @@ import {
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/i18n/provider";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/qrs", label: "My QR Codes", icon: QrCode },
-  { href: "/create", label: "Create QR", icon: PlusCircle },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/templates", label: "Templates", icon: LayoutTemplate },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/qrs", labelKey: "nav.myQRCodes", icon: QrCode },
+  { href: "/create", labelKey: "nav.createQR", icon: PlusCircle },
+  { href: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
+  { href: "/templates", labelKey: "nav.templates", icon: LayoutTemplate },
+  { href: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 border-r border-border bg-card">
@@ -49,10 +51,10 @@ export function Sidebar() {
                   )}
                 >
                   <item.icon className="size-5 flex-shrink-0" />
-                  {item.label}
+                  {t(item.labelKey)}
                   {item.href === "/create" && (
                     <Badge variant="secondary" className="ml-auto text-[10px] px-1.5">
-                      New
+                      {t("common.new")}
                     </Badge>
                   )}
                 </Link>
@@ -62,9 +64,9 @@ export function Sidebar() {
 
           <div className="px-3 mt-auto">
             <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-4 border border-primary/10">
-              <p className="text-xs font-semibold text-primary">100% Free</p>
+              <p className="text-xs font-semibold text-primary">{t("settings.freeBanner")}</p>
               <p className="text-[11px] text-muted-foreground mt-1">
-                Free forever. No subscriptions. No ads.
+                {t("settings.freeBannerDesc")}
               </p>
             </div>
           </div>

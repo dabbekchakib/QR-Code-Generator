@@ -46,6 +46,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "latest",
+    "fake-indexeddb": "^6.2.5",
     "postcss": "^8",
     "tailwindcss": "^4",
     "typescript": "^5"

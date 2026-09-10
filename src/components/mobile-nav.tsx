@@ -4,17 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, QrCode, PlusCircle, BarChart3, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/provider";
 
 const mobileNavItems = [
-  { href: "/dashboard", label: "Home", icon: Home },
-  { href: "/qrs", label: "QR Codes", icon: QrCode },
-  { href: "/create", label: "Create", icon: PlusCircle, isPrimary: true },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard", labelKey: "nav.dashboard", icon: Home },
+  { href: "/qrs", labelKey: "nav.myQRCodes", icon: QrCode },
+  { href: "/create", labelKey: "nav.createQR", icon: PlusCircle, isPrimary: true },
+  { href: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
+  { href: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur-md safe-area-pb">
@@ -48,7 +50,7 @@ export function MobileNav() {
               )}
             >
               <item.icon className="size-5" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
