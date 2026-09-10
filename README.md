@@ -6,7 +6,22 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 2 (Current)
+### Phase 3 (Current)
+- **Local QR library** — QR Codes stored in IndexedDB on this device (no server)
+- **`/qrs` library** — search, filter by status (All/Static/Favorites), filter by type, sort (recently updated/created, name A–Z/Z–A)
+- **`/qrs/[id]` detail page** — preview on actual background, view content, download PNG/SVG, copy content, share, favorite, edit, duplicate, delete
+- **Save & Edit flow** — Save a configured QR with a name; edit an existing QR in-place at `/create?edit=<id>` (type locked while editing)
+- **Export / Import** — JSON backup files (`qr-manager-backup-YYYYMMDD.json`) with schema validation
+- **Clear all local data** — with confirmation dialog (Settings → Local Data)
+- **Dashboard** — real local QR count, favorites count, "Scans — Coming with Dynamic QR", Recent QR Codes
+- **Homepage** — Recent QR Codes section when records exist
+- **Toast notifications** — save/export/import/delete feedback (self-dismissing)
+- **Data model** — `QRCodeRecord` stores the original data + customization (never only the generated image)
+- **Repository abstraction** — `QRRepository` interface (IndexedDB implementation now, interchangeable for a future remote backend)
+- **i18n coverage** — all library/detail/settings texts localized in FR, EN, AR
+- **Unit tests** — for storage utilities (search/filter/sort, duplicate) and backup import/export validation
+
+### Phase 2
 - Real QR Code generation engine (client-side, `qrcode` library)
 - Supported QR types: **URL**, **WiFi**, **Phone**, **Email**, **WhatsApp**, **vCard**, **Text**
 - Local QR generation — your data never leaves your browser
@@ -42,7 +57,6 @@ Create, customize and manage QR Codes from one simple, free application.
 - QR Code logos & advanced styles (Rounded, Dots)
 - Supabase authentication
 - Scan tracking & analytics
-- IndexedDB offline sync
 - Templates system
 - Public QR redirect API
 
@@ -53,16 +67,12 @@ Create, customize and manage QR Codes from one simple, free application.
 | Next.js 16 | App Router, React Server Components |
 | TypeScript | Strict mode, full type safety |
 | Tailwind CSS v4 | Utility-first styling |
-| shadcn/ui | Accessible component library |
+| shadcn/ui + Base UI | Accessible component library |
 | Lucide React | Icon library |
-| Supabase | Backend (Auth, Database, Storage) |
-| PostgreSQL | Database (via Supabase) |
+| IndexedDB (`idb`) | Local persistence (My QR Codes) |
 | Zod | Schema validation |
-| React Hook Form | Form management |
 | qrcode | Client-side QR Code generation |
 | Vitest | Unit testing |
-| Zustand | Global state (minimal) |
-| TanStack Query | Server state management |
 | PWA | Service Worker, manifest, offline support |
 
 ## Architecture
@@ -95,7 +105,11 @@ src/
 │   ├── dashboard/
 │   └── qr/
 │       ├── components/      # QRType cards, forms, preview, customizer, download
-│       │   └── forms/       # URL, WiFi, Phone, Email, WhatsApp, vCard, Text forms
+│       │   ├── forms/       # URL, WiFi, Phone, Email, WhatsApp, vCard, Text forms
+│       │   ├── library/     # QR card, skeleton, empty state
+│       │   └── detail/      # QR detail page content
+│       ├── hooks/           # use-qrs, use-qr-preview
+│       ├── storage/         # QRCodeRecord, IndexedDB repository, backup, utils
 │       ├── lib/             # qr-generator, qr-renderer, qr-download, qr-clipboard
 │       ├── __tests__/       # Unit tests
 │       ├── types.ts         # Form values + customization types
@@ -142,7 +156,8 @@ Supported QR types:
 
 - Node.js 18+
 - npm or yarn
-- Supabase project (optional, for Phase 2+)
+
+No database or external services required — everything runs locally in the browser.
 
 ### Installation
 
@@ -153,17 +168,6 @@ cd qr-manager
 
 # Install dependencies
 npm install
-
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your Supabase credentials
-```
-
-### Environment Variables
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 ### Development
@@ -196,6 +200,14 @@ npm test
 ### Creating a QR Code
 
 Navigate to `/create`, pick a type, fill in the fields — the QR code updates live. Customize colors, size, and error correction, then download PNG or SVG. You can also deep-link to a specific type: `/create?type=whatsapp`.
+
+Click **Save QR** to name and store it locally, or open an existing code for editing via `/create?edit=<id>`.
+
+### Managing QR Codes
+
+- **Library** (`/qrs`) — search, filter (All/Static/Favorites), filter by type, and sort your codes. Export/Import JSON backups from the header.
+- **Detail** (`/qrs/[id]`) — preview the code, download PNG/SVG, copy/share the content, toggle favorite, and edit/duplicate/delete.
+- **Settings → Local Data** — export a backup file, import one, or clear all locally stored QR Codes.
 
 ## PWA
 

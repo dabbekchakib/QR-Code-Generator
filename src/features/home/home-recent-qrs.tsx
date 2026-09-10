@@ -1,0 +1,90 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowRight, QrCode } from "lucide-react";
+import { useQRs } from "@/features/qr/hooks/use-qrs";
+import { useQRPreviewDataUrl, useQRContent, useQRTypeName } from "@/features/qr/hooks/use-qr-preview";
+import { formatUpdatedAt } from "@/features/qr/storage/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+function RecentQRCard({ id }: { id: string }) {
+  const { records } = useQRs();
+  const record = records.find((r) => r.id === id);
+  const content = useQRContent(record ?? null);
+  const preview = useQRPreviewDataUrl(content, record?.customization ?? null);
+  const typeName = useQRTypeName(record?.type ?? null);
+
+  if (!record) return null;
+
+  return (
+    <Link href={`/qrs/${record.id}`} className="block group">
+      <Card className="h-full transition-all hover:border-primary/40">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={preview}
+                alt={record.name}
+                className="size-12 rounded-lg border bg-white shrink-0"
+              />
+            ) : (
+              <div className="size-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <QrCode className="size-5 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-medium text-foreground truncate">
+                {record.name}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {typeName} • {formatUpdatedAt(record.updatedAt)}
+              </p>
+            </div>
+            <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors mt-1 shrink-0" />
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+export function HomeRecentQRs() {
+  const { records, loading } = useQRs();
+
+  if (loading || records.length === 0) return null;
+
+  const recent = [...records]
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    )
+    .slice(0, 3);
+
+  return (
+    <section className="py-16 sm:py-24 border-t border-border">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Recent QR Codes
+            </h2>
+            <p className="text-muted-foreground mt-1">
+              Pick up where you left off.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" render={<Link href="/qrs" />} nativeButton={false}>
+            My QR Codes
+            <ArrowRight className="size-3" />
+          </Button>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-4">
+          {recent.map((r) => (
+            <RecentQRCard key={r.id} id={r.id} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

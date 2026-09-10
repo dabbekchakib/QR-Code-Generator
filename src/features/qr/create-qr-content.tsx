@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { qrTypes } from "./qr-types-config";
 import { QRForm } from "./components/qr-form";
 import { QRPreview } from "./components/qr-preview";
@@ -21,7 +22,20 @@ import {
 } from "./types";
 import { urlSchema, wifiSchema, phoneSchema, emailSchema, whatsappSchema, vcardSchema, textSchema } from "./schemas";
 import { cn } from "@/lib/utils";
-import { RotateCcw, Settings2, QrCode, Shield } from "lucide-react";
+import { RotateCcw, Settings2, QrCode, Shield, Save, Lock } from "lucide-react";
+import { useI18n } from "@/i18n/provider";
+import { useToast } from "@/lib/toast-store";
+import { qrRepository } from "./storage";
+import type { QRCodeRecord } from "./storage";
+import { getDefaultName } from "./storage";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function getSchema(type: QRType) {
   switch (type) {
@@ -46,11 +60,20 @@ function mapZodErrors(error: unknown): Record<string, string> {
   return result;
 }
 
+const VALID_TYPES: QRType[] = ["website", "wifi", "phone", "email", "whatsapp", "vcard", "text"];
+
+type SaveState = "idle" | "saving" | "saved" | "error";
+
 export function CreateQRContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { t } = useI18n();
+  const { showToast } = useToast();
+
   const typeParam = searchParams.get("type") as QRType | null;
-  const validTypes: QRType[] = ["website", "wifi", "phone", "email", "whatsapp", "vcard", "text"];
-  const initialType = typeParam && validTypes.includes(typeParam) ? typeParam : null;
+  const editParam = searchParams.get("edit");
+  const isEditing = !!editParam;
+  const initialType = typeParam && VALID_TYPES.includes(typeParam) ? typeParam : null;
 
   const [selectedType, setSelectedType] = useState<QRType | null>(initialType);
   const [values, setValues] = useState<AnyFormValues>(() =>
@@ -58,9 +81,18 @@ export function CreateQRContent() {
   );
   const [customization, setCustomization] = useState<QRCustomization>(DEFAULT_CUSTOMIZATION);
 
+  const [editedRecord, setEditedRecord] = useState<QRCodeRecord | null>(null);
+  const loadedRef = useRef(false);
+
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [recordName, setRecordName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+
   const handleTypeSelect = useCallback((type: QRType) => {
     setSelectedType(type);
     setValues(getDefaultValues(type));
+    setCustomization(DEFAULT_CUSTOMIZATION);
   }, []);
 
   const handleValuesChange = useCallback((newValues: AnyFormValues) => {
@@ -88,13 +120,89 @@ export function CreateQRContent() {
     setCustomization(DEFAULT_CUSTOMIZATION);
   }, [selectedType]);
 
+  useEffect(() => {
+    if (!editParam || loadedRef.current) return;
+    let cancelled = false;
+    (async () => {
+      const record = await qrRepository.get(editParam).catch(() => null);
+      if (cancelled) return;
+      if (record) {
+        loadedRef.current = true;
+        setEditedRecord(record);
+        setSelectedType(record.type);
+        setValues(record.values as AnyFormValues);
+        setCustomization(record.customization);
+        setRecordName(record.name);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editParam]);
+
+  const canSave = isEditing ? !!qrContent : !!qrContent;
+
+  const openSaveDialog = () => {
+    setRecordName(editedRecord?.name ?? getDefaultName(selectedType ?? "website"));
+    setNameError(null);
+    setShowSaveDialog(true);
+  };
+
+  const handleSave = async () => {
+    const name = recordName.trim();
+    if (!name) {
+      setNameError(t("create.nameRequired"));
+      return;
+    }
+    if (!selectedType) return;
+    setSaveState("saving");
+    setNameError(null);
+    try {
+      if (editedRecord) {
+        const updated: QRCodeRecord = {
+          ...editedRecord,
+          name,
+          type: selectedType,
+          values,
+          customization,
+          isDynamic: false,
+          updatedAt: new Date().toISOString(),
+        };
+        await qrRepository.update(updated);
+        showToast({ title: isEditing ? t("create.saved") : t("create.saved"), variant: "success" });
+        setSaveState("saved");
+        setShowSaveDialog(false);
+        router.push(`/qrs/${updated.id}`);
+      } else {
+        const created = await qrRepository.create({
+          name,
+          type: selectedType,
+          values,
+          customization,
+          isDynamic: false,
+        });
+        showToast({ title: t("create.saved"), variant: "success" });
+        setSaveState("saved");
+        setShowSaveDialog(false);
+        router.push(`/qrs/${created.id}`);
+      }
+    } catch {
+      setSaveState("error");
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-6xl">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Create QR Code</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Choose a type, fill in the details, and download your QR code instantly.
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">
+          {isEditing ? t("create.editTitle") : t("create.title")}
+        </h1>
+
+        {isEditing && editedRecord ? (
+          <p className="text-sm text-muted-foreground mt-1">{editedRecord.name}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground mt-1">{t("create.subtitle")}</p>
+        )}
       </div>
 
       {/* Type Selection */}
@@ -104,22 +212,25 @@ export function CreateQRContent() {
             <span className="size-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">
               1
             </span>
-            Choose Type
+            {isEditing ? t("create.selectType") : t("create.chooseType")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {qrTypes.map((type) => {
               const isSelected = selectedType === type.type;
+              const isLocked = isEditing && !!editedRecord && type.type === editedRecord.type;
               return (
                 <button
                   key={type.type}
                   onClick={() => handleTypeSelect(type.type)}
+                  disabled={isEditing && !!editedRecord}
                   className={cn(
                     "flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all text-center",
                     isSelected
                       ? "border-primary bg-primary/5 shadow-sm"
-                      : "border-border hover:border-primary/30 hover:bg-muted/50"
+                      : "border-border hover:border-primary/30 hover:bg-muted/50",
+                    isEditing && !!editedRecord && "opacity-60 cursor-not-allowed"
                   )}
                 >
                   <div
@@ -131,15 +242,21 @@ export function CreateQRContent() {
                     <type.icon className="size-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{type.type.charAt(0).toUpperCase() + type.type.slice(1)}</p>
+                    <p className="text-sm font-medium">
+                      {t(`qrTypes.${type.type}.name`)}
+                      {isLocked && <Lock className="inline size-3 ml-1 text-muted-foreground" />}
+                    </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {type.descKey}
+                      {t(type.descKey)}
                     </p>
                   </div>
                 </button>
               );
             })}
           </div>
+          {isEditing && editedRecord && (
+            <p className="text-xs text-muted-foreground mt-3">{t("create.editNote")}</p>
+          )}
         </CardContent>
       </Card>
 
@@ -154,7 +271,7 @@ export function CreateQRContent() {
                   <span className="size-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">
                     2
                   </span>
-                  Configure
+                  {t("create.configure")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -167,19 +284,15 @@ export function CreateQRContent() {
               </CardContent>
             </Card>
 
-            {/* Customizer */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Settings2 className="size-4" />
-                  Customize
+                  {t("create.customize")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <QRCustomizer
-                  customization={customization}
-                  onChange={setCustomization}
-                />
+                <QRCustomizer customization={customization} onChange={setCustomization} />
               </CardContent>
             </Card>
           </div>
@@ -191,41 +304,61 @@ export function CreateQRContent() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <QrCode className="size-4" />
-                    Preview
+                    {t("create.preview")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <QRPreview
-                    content={qrContent}
-                    customization={customization}
-                  />
+                  <QRPreview content={qrContent} customization={customization} />
 
                   {qrContent && (
                     <>
                       <Separator />
 
-                      <QRDownloadButtons
-                        content={qrContent}
-                        type={selectedType}
-                        customization={customization}
-                      />
+                      <QRDownloadButtons content={qrContent} type={selectedType} customization={customization} />
 
-                      <div className="flex items-center gap-2">
-                        <QRContentActions
-                          type={selectedType}
-                          content={qrContent}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleReset}
-                          aria-label="Reset form"
-                        >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <QRContentActions type={selectedType} content={qrContent} />
+                        <Button variant="ghost" size="sm" onClick={handleReset} aria-label={t("create.resetForm")}>
                           <RotateCcw className="size-4" />
-                          Reset
+                          {t("create.resetForm")}
                         </Button>
                       </div>
                     </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Save */}
+              <Card className="mt-4">
+                <CardContent className="p-4">
+                  <Button
+                    className="w-full"
+                    onClick={openSaveDialog}
+                    disabled={!canSave || saveState === "saving"}
+                  >
+                    {saveState === "saving" ? (
+                      <>
+                        {t("create.saving")}
+                      </>
+                    ) : saveState === "saved" ? (
+                      <>
+                        <QrCode className="size-4" />
+                        {t("create.saved")}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="size-4" />
+                        {t("create.saveQr")}
+                      </>
+                    )}
+                  </Button>
+                  {saveState === "error" && (
+                    <div className="flex items-center justify-between mt-2 gap-2">
+                      <p className="text-xs text-destructive">{t("create.saveError")}</p>
+                      <Button variant="outline" size="xs" onClick={openSaveDialog}>
+                        {t("create.retry")}
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -234,13 +367,52 @@ export function CreateQRContent() {
               <div className="flex items-start gap-2 mt-3 px-1">
                 <Shield className="size-3.5 text-muted-foreground mt-0.5 shrink-0" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Your data stays in your browser. Static QR codes are generated locally and are not uploaded to our servers.
+                  {t("create.privacyNote")}
                 </p>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Save name dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={(open) => !open && setShowSaveDialog(false)}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>{t("create.saveDialogTitle")}</DialogTitle>
+            <DialogDescription>{t("create.saveDialogDescription")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label htmlFor="qr-save-name" className="text-sm font-medium">
+              {t("create.nameLabel")} <span className="text-destructive">*</span>
+            </label>
+            <Input
+              id="qr-save-name"
+              value={recordName}
+              onChange={(e) => setRecordName(e.target.value)}
+              placeholder={t("create.namePlaceholder")}
+              aria-invalid={!!nameError}
+              aria-describedby={nameError ? "qr-save-name-error" : undefined}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSave();
+              }}
+            />
+            {nameError && (
+              <p id="qr-save-name-error" className="text-xs text-destructive" role="alert">
+                {nameError}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)} nativeButton={false}>
+              {t("detail.deleteDialog.cancel")}
+            </Button>
+            <Button onClick={handleSave} disabled={saveState === "saving"} nativeButton={false}>
+              {saveState === "saving" ? t("create.saving") : t("create.saveQr")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

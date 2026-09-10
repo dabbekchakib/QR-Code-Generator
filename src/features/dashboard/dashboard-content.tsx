@@ -1,51 +1,127 @@
 "use client";
 
+import { useMemo } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getDashboardStats, getScanStats } from "@/services/mock-data";
+import { Button } from "@/components/ui/button";
+import { useQRs } from "@/features/qr/hooks/use-qrs";
+import { useQRPreviewDataUrl, useQRTypeName } from "@/features/qr/hooks/use-qr-preview";
+import { useQRContent } from "@/features/qr/hooks/use-qr-preview";
 import {
   QrCode,
   ScanLine,
-  TrendingUp,
-  ArrowUpRight,
+  ArrowRight,
+  Star,
   BarChart3,
 } from "lucide-react";
+import { useI18n } from "@/i18n/provider";
+import { formatUpdatedAt } from "@/features/qr/storage";
+
+function RecentQRCard({ id }: { id: string }) {
+  const { records } = useQRs();
+  const record = records.find((r) => r.id === id);
+
+  const content = useQRContent(record ?? null);
+  const preview = useQRPreviewDataUrl(content, record?.customization ?? null);
+  const typeName = useQRTypeName(record?.type ?? null);
+
+  if (!record) return null;
+
+  return (
+    <Link href={`/qrs/${record.id}`} className="block group">
+      <Card className="h-full transition-colors group-hover:border-primary/40">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            {preview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={preview}
+                alt={record.name}
+                className="size-12 rounded-lg border bg-white shrink-0"
+              />
+            ) : (
+              <div className="size-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <QrCode className="size-5 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {record.name}
+                </p>
+                {record.favorite && (
+                  <Star className="size-3 fill-amber-400 text-amber-400 shrink-0" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {typeName} • {formatUpdatedAt(record.updatedAt)}
+              </p>
+              <Badge variant="secondary" className="mt-1.5 text-[10px]">
+                Static
+              </Badge>
+            </div>
+            <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors mt-1 shrink-0" />
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
 
 export function DashboardContent() {
-  const stats = getDashboardStats();
-  const scanStats = getScanStats();
+  const { t } = useI18n();
+  const { records, loading } = useQRs();
+
+  const favoriteCount = useMemo(
+    () => records.filter((r) => r.favorite).length,
+    [records]
+  );
+
+  const recent = useMemo(
+    () =>
+      [...records].sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      ),
+    [records]
+  );
 
   const statCards = [
     {
-      title: "Total QR Codes",
-      value: stats.totalQRCodes.toLocaleString(),
+      title: t("dashboard.totalQRCodes"),
+      value: loading ? "..." : records.length.toLocaleString(),
+      valueLabel: t("dashboard.yourQRCodes"),
       icon: QrCode,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
-      title: "Total Scans",
-      value: stats.totalScans.toLocaleString(),
+      title: t("dashboard.totalScans"),
+      value: "—",
+      valueLabel: t("dashboard.scansComing"),
       icon: ScanLine,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10",
     },
     {
-      title: "Today",
-      value: stats.todayScans.toLocaleString(),
-      icon: TrendingUp,
+      title: t("dashboard.totalQRCodes") + " · ⭐",
+      value: loading ? "..." : favoriteCount.toLocaleString(),
+      valueLabel: t("library.status.favorites"),
+      icon: Star,
       color: "text-amber-500",
       bgColor: "bg-amber-500/10",
-      change: "+12%",
     },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-foreground">
+          {t("nav.dashboard")}
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Welcome back. Here&apos;s an overview of your QR Codes.
+          {t("dashboard.yourQRCodes")}
         </p>
       </div>
 
@@ -60,12 +136,9 @@ export function DashboardContent() {
                   <p className="text-2xl font-bold text-foreground mt-1">
                     {stat.value}
                   </p>
-                  {stat.change && (
-                    <Badge variant="secondary" className="mt-2 text-xs gap-1">
-                      <ArrowUpRight className="size-3" />
-                      {stat.change}
-                    </Badge>
-                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stat.valueLabel}
+                  </p>
                 </div>
                 <div
                   className={`size-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}
@@ -79,77 +152,56 @@ export function DashboardContent() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Scans Overview Chart Placeholder */}
+        {/* Scans Overview Placeholder */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="size-4 text-muted-foreground" />
-              Scans Overview
+              {t("dashboard.scansOverview")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-end gap-2 px-2">
-              {scanStats.dailyScans.map((day) => {
-                const maxScans = Math.max(
-                  ...scanStats.dailyScans.map((d) => d.scans)
-                );
-                const height = (day.scans / maxScans) * 100;
-                return (
-                  <div
-                    key={day.date}
-                    className="flex-1 flex flex-col items-center gap-2"
-                  >
-                    <div className="w-full relative group">
-                      <div
-                        className="w-full rounded-t-md bg-primary/20 transition-all group-hover:bg-primary/30"
-                        style={{ height: `${height}px` }}
-                      >
-                        <div className="absolute bottom-0 left-0 right-0 rounded-t-md bg-primary/80 transition-all group-hover:bg-primary"
-                          style={{ height: "100%" }}
-                        />
-                      </div>
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">
-                      {day.date}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="h-64 flex items-center justify-center flex-col gap-3 border-2 border-dashed rounded-xl">
+              <ScanLine className="size-8 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground text-center px-6">
+                {t("dashboard.scansComing")}
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Top QR Codes */}
+        {/* Recent QR Codes */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Top QR Codes</CardTitle>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base">
+              {t("dashboard.recentQRCodes")}
+            </CardTitle>
+            <Button variant="ghost" size="sm" render={<Link href="/qrs" />} nativeButton={false}>
+              {t("dashboard.viewAll")}
+              <ArrowRight className="size-3" />
+            </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {scanStats.topQR.map((qr, index) => (
-                <div key={qr.id} className="flex items-center gap-3">
-                  <span className="text-xs font-medium text-muted-foreground w-5">
-                    {index + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {qr.label}
-                    </p>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{
-                          width: `${(qr.scans / scanStats.topQR[0].scans) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold text-foreground tabular-nums">
-                    {qr.scans.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {loading ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                ...
+              </p>
+            ) : recent.length === 0 ? (
+              <div className="text-center py-6 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {t("dashboard.noQRCodes")}
+                </p>
+                <Button size="sm" render={<Link href="/create" />} nativeButton={false}>
+                  {t("common.createQR")}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recent.slice(0, 5).map((r) => (
+                  <RecentQRCard key={r.id} id={r.id} />
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

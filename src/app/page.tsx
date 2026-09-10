@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
+import { HomeRecentQRs } from "@/features/home/home-recent-qrs";
 
 const qrTypes = [
   { icon: Globe, name: "Website", desc: "Link to any website", color: "text-blue-500" },
@@ -168,6 +169,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Recent QR Codes */}
+      <HomeRecentQRs />
 
       {/* CTA */}
       <section className="py-16 sm:py-24 border-t border-border">
