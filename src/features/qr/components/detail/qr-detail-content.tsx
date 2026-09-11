@@ -21,6 +21,7 @@ import { useI18n } from "@/i18n/provider";
 import { useToast } from "@/lib/toast-store";
 import { cn } from "@/lib/utils";
 import { getDynamicQRUrlWithFallback, isSafeDestination, DynamicQRError } from "@/features/qr/dynamic";
+import { QRAnalyticsCard } from "@/features/analytics/components/qr-analytics-card";
 import {
   Dialog,
   DialogContent,
@@ -349,6 +350,9 @@ export function QRDetailContent() {
           </CardContent>
         </Card>
       )}
+
+      {/* Analytics (dynamic only) */}
+      {record.isDynamic && <QRAnalyticsCard qrId={record.id} />}
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">

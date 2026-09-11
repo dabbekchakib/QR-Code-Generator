@@ -40,23 +40,3 @@ export interface VCardData extends QRData {
   title?: string;
   website?: string;
 }
-
-export interface ScanStats {
-  totalScans: number;
-  todayScans: number;
-  topQR: Array<{
-    id: string;
-    label: string;
-    scans: number;
-  }>;
-  dailyScans: Array<{
-    date: string;
-    scans: number;
-  }>;
-}
-
-export interface DashboardStats {
-  totalQRCodes: number;
-  totalScans: number;
-  todayScans: number;
-}

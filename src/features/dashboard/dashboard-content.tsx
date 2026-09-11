@@ -14,10 +14,12 @@ import {
   ArrowRight,
   Star,
   Globe,
-  Power,
+  CalendarDays,
 } from "lucide-react";
 import { useI18n } from "@/i18n/provider";
 import { formatUpdatedAt } from "@/features/qr/storage";
+import { useScanSummary } from "@/features/analytics/hooks/use-analytics";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 
 function RecentQRCard({ id }: { id: string }) {
   const { records } = useQRs();
@@ -75,7 +77,15 @@ function RecentQRCard({ id }: { id: string }) {
 
 export function DashboardContent() {
   const { t } = useI18n();
+  const online = useOnlineStatus();
   const { records, loading } = useQRs();
+  const { summary } = useScanSummary();
+
+  // Scanning numbers are real server data only: unavailable (offline, not
+  // signed in, or still loading) is rendered as "—", never a placeholder.
+  const scansAvailable = online && summary != null;
+  const scansTotal = scansAvailable ? summary.total.toLocaleString() : "—";
+  const scansToday = scansAvailable ? summary.today.toLocaleString() : "—";
 
   const recent = useMemo(
     () =>
@@ -96,30 +106,30 @@ export function DashboardContent() {
       bgColor: "bg-primary/10",
     },
     {
-      title: t("dashboard.totalStatic"),
-      value: loading ? "..." : records.filter((r) => !r.isDynamic).length.toLocaleString(),
-      valueLabel: t("library.status.static"),
-      icon: QrCode,
-      color: "text-slate-500",
-      bgColor: "bg-slate-500/10",
-    },
-    {
       title: t("dashboard.totalDynamic"),
-      value: loading ? "..." : records.filter((r) => r.isDynamic).length.toLocaleString(),
-      valueLabel: t("library.status.dynamic"),
-      icon: Globe,
-      color: "text-primary",
-      bgColor: "bg-primary/10",
-    },
-    {
-      title: t("dashboard.activeDynamic"),
       value: loading
         ? "..."
-        : records.filter((r) => r.isDynamic && r.status === "active").length.toLocaleString(),
-      valueLabel: t("detail.statusActive"),
-      icon: Power,
+        : records.filter((r) => r.isDynamic).length.toLocaleString(),
+      valueLabel: t("library.status.dynamic"),
+      icon: Globe,
+      color: "text-purple-500",
+      bgColor: "bg-purple-500/10",
+    },
+    {
+      title: t("dashboard.totalScans"),
+      value: scansTotal,
+      valueLabel: t("analytics.scanDefinition"),
+      icon: ScanLine,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10",
+    },
+    {
+      title: t("dashboard.scansToday"),
+      value: scansToday,
+      valueLabel: t("analytics.today"),
+      icon: CalendarDays,
+      color: "text-amber-500",
+      bgColor: "bg-amber-500/10",
     },
   ];
 
@@ -196,9 +206,17 @@ export function DashboardContent() {
                 <p className="text-xs text-muted-foreground">{t("dashboard.activeDynamic")}</p>
               </div>
             </div>
-            <div className="mt-4 flex items-start gap-2 text-xs text-muted-foreground border-t border-border pt-4">
-              <ScanLine className="size-3.5 mt-0.5 shrink-0" />
-              <p>{t("dashboard.scansComing")}</p>
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
+              <div className="flex items-start gap-2 text-xs text-muted-foreground min-w-0">
+                <ScanLine className="size-3.5 mt-0.5 shrink-0" />
+                <p className="truncate">{t("dashboard.analyticsHint")}</p>
+              </div>
+              <Link
+                href="/analytics"
+                className="shrink-0 text-xs font-medium text-primary hover:underline"
+              >
+                {t("dashboard.openAnalytics")}
+              </Link>
             </div>
           </CardContent>
         </Card>

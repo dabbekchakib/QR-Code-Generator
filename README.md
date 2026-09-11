@@ -6,7 +6,20 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 5 (Current)
+### Phase 6 (Current)
+- **Scan tracking** — every hit on an active Dynamic QR (with a destination) records exactly **one scan** (`qr_scans`, migration 04): a phone camera scan, a click, even a page reload. Replayed requests equal replayed scans; this is documented in-app (`1 hit = 1 scan`)
+- **Privacy-first** — only three limited categories are stored per scan: **device type** (desktop/tablet/mobile/unknown), **operating system**, and **browser**. **No IP address, no raw User-Agent, no location, no cookies, no fingerprinting, no third-party trackers**
+- **Server-side recording** — the public route resolves the QR, validates it is a dynamic + active code with a safe destination, then records the scan through the `SECURITY DEFINER` function `record_qr_scan()` (which resolves the short code internally — it never accepts a client-supplied QR id). **Tracking failures can never block the visitor's redirect**
+- **Owner-only reads with RLS** — `qr_scans` has only a SELECT policy scoped to the QR owner (`qr_codes.user_id = auth.uid()`); anonymous visitors get no INSERT/UPDATE/DELETE access and are blocked from the analytics functions at the grant level (`revoke execute ... from anon`)
+- **Single-fetch analytics** — `get_qr_analytics()` returns one JSON payload (summary, timeseries, top QR codes, devices, OS, browsers) scoped by `auth.uid()` with a per-QR ownership guard, so every dashboard widget shares the exact same period and QR filter
+- **`/analytics` dashboard** — KPIs (Total / Today / This Week / This Month), a dependency-free SVG **Scans over time** chart (hourly for ≤48 h, daily, weekly, monthly), **Top QR Codes**, and device/OS/browser breakdowns with sizes and percentages; period (Today/7/30/90/all-time) and QR filters, empty/loading/error/offline states, and a privacy notice card
+- **Detail analytics** — dynamic QRs show a compact scans summary plus a "View full analytics" link (`/analytics?qr=<id>`)
+- **Real dashboard data** — dashboard KPI cards now show Total QR Codes, Dynamic QR Codes, **Total Scans** and **Scans Today** (all-time real data only; "—" when offline or signed out). Hard-coded placeholder stats were removed
+- **Timezone-correct periods** — timestamps are stored in UTC; period windows are calendar-aligned to the visitor's local timezone (`offsetMinutes` passed to the RPC)
+- **Unit tests** — UA parsing (iPhone/iPadOS 13+, Android Chrome, Windows Chrome, macOS Safari, Firefox, Edge, Samsung Internet, unknown), period windows, percentage safety (never NaN/Infinity), repository mappings, and redirect-service behavior (incl. tracking-failure resilience: a failing scan still redirects)
+- **Live E2E** — verified against the production build + live Supabase: 28 checks covering scan recording per hit, disabled/static/missing QR never recording, anon blocked from analytics RPCs, ownership guard, aggregation correctness, and hourly/daily timeseries granularity
+
+### Phase 5
 - **Dynamic QR codes** — toggle between **Static** and **Dynamic** when saving (`/create`); dynamic codes get a permanent public URL `https://<APP_URL>/qr/<shortCode>` that always redirects to the latest destination
 - **Editable destinations** — update the target URL of a dynamic code at any time without changing the shareable short URL (`/qrs/[id]`)
 - **Disable / Enable** — dynamic codes can be turned off (public page returns **410 Gone**) and back on
@@ -14,7 +27,6 @@ Create, customize and manage QR Codes from one simple, free application.
 - **Secure short codes** — 8-char URL-safe alphabet (no `0/O/1/l/I`), unique-index enforced, `createDynamic` auto-regenerates on collision (max 5 attempts)
 - **Offline-first** — dynamic codes created offline are queued with their short code and destination, and replayed on reconnect like any other mutation
 - **Duplicate** — duplicating a dynamic code generates a fresh short code (target URL is preserved)
-- **Dashboard** — stat cards for Total/Static/Dynamic/Active-Dynamic and a Dynamic QR summary card
 - **Unit tests** — dynamic module (short codes, destination validation, create/update/disable, collision retry, offline queue) plus cloud-mapper and backup schema coverage
 
 ### Phase 4
@@ -35,7 +47,7 @@ Create, customize and manage QR Codes from one simple, free application.
 - **Save & Edit flow** — Save a configured QR with a name; edit an existing QR in-place at `/create?edit=<id>` (type locked while editing)
 - **Export / Import** — JSON backup files (`qr-manager-backup-YYYYMMDD.json`) with schema validation
 - **Clear all local data** — with confirmation dialog (Settings → Local Data)
-- **Dashboard** — real local QR count, favorites count, "Scans — Coming with Dynamic QR", Recent QR Codes
+- **Dashboard** — real local QR count, favorites count, and Recent QR Codes
 - **Homepage** — Recent QR Codes section when records exist
 - **Toast notifications** — save/export/import/delete feedback (self-dismissing)
 - **Data model** — `QRCodeRecord` stores the original data + customization (never only the generated image)
@@ -76,7 +88,6 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ### Upcoming Phases
 - QR Code logos & advanced styles (Rounded, Dots)
-- Scan tracking & analytics
 - Templates system
 
 ## Tech Stack
@@ -251,6 +262,13 @@ Click **Save QR** to name and store it locally, or open an existing code for edi
 - Choose **Static** (the QR encodes the final content forever) or **Dynamic** (the QR encodes a permanent URL) when saving.
 - For dynamic codes, the generated QR points to a permanent link `https://<APP_URL>/qr/<shortCode>`; scanners are redirected to the current destination, so you can change it anytime without re-printing the code.
 - Manage dynamic codes from the detail page: copy the permanent URL, **Edit destination**, or **Disable / Enable**.
+
+### Scan tracking & analytics
+
+- Every hit on an active dynamic QR records **one scan** (server-side, on the redirect). Refresh = new scan. Static and disabled codes never record scans.
+- Privacy: only device type, operating system and browser are stored — never an IP, raw User-Agent, or location. No cookies, no third-party tracking.
+- **Analytics** (`/analytics`) shows Total / Today / This Week / This Month KPIs, a scans-over-time chart, Top QR Codes, and device/OS/browser breakdowns. Period (Today / 7 / 30 / 90 days / all time) and per-QR filters are supported; every widget reflects the exact same window.
+- One request == one scan. There is deliberately no "unique visitors" concept.
 
 ### Accounts & Sync
 
