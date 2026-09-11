@@ -5,7 +5,7 @@ import type {
 } from "./types";
 import type { QRType } from "@/types";
 import { getDefaultValues } from "../types";
-import { DB_STORE, createRecord, getDB } from "./db";
+import { DB_STORE, createRecord, getDB, normalizeRecord } from "./db";
 
 export { DB_NAME, DB_STORE, DB_VERSION } from "./db";
 
@@ -20,6 +20,9 @@ export class IndexedDBQRRepository implements QRRepository {
       customization: input.customization,
       isDynamic: input.isDynamic,
       favorite: input.favorite,
+      shortCode: input.shortCode,
+      destinationUrl: input.destinationUrl,
+      status: input.status,
     });
     await db.add(DB_STORE, record);
     return record;
@@ -27,20 +30,26 @@ export class IndexedDBQRRepository implements QRRepository {
 
   async get(id: string): Promise<QRCodeRecord | null> {
     const db = await getDB();
-    return (await db.get(DB_STORE, id)) ?? null;
+    const record = await db.get(DB_STORE, id);
+    return record ? normalizeRecord(record) : null;
   }
 
   async list(): Promise<QRCodeRecord[]> {
     const db = await getDB();
     const records = await db.getAll(DB_STORE);
-    return records.sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
+    return records
+      .map(normalizeRecord)
+      .sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
   }
 
   async update(record: QRCodeRecord): Promise<QRCodeRecord> {
     const db = await getDB();
-    const updated = { ...record, updatedAt: new Date().toISOString() };
+    const updated = {
+      ...normalizeRecord(record),
+      updatedAt: new Date().toISOString(),
+    };
     await db.put(DB_STORE, updated);
     return updated;
   }
@@ -58,7 +67,7 @@ export class IndexedDBQRRepository implements QRRepository {
   async saveAll(records: QRCodeRecord[]): Promise<void> {
     const db = await getDB();
     for (const record of records) {
-      await db.put(DB_STORE, record);
+      await db.put(DB_STORE, normalizeRecord(record));
     }
   }
 }

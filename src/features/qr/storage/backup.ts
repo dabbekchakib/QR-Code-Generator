@@ -25,40 +25,67 @@ const recordBase = z.object({
   customization: customizationSchema,
   isDynamic: z.boolean(),
   favorite: z.boolean(),
+  shortCode: z.string().min(1).nullable().optional(),
+  destinationUrl: z.string().min(1).nullable().optional(),
+  status: z.enum(["active", "disabled"]).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
-export const qrRecordSchema = z.discriminatedUnion("type", [
-  recordBase.extend({
-    type: z.literal("website"),
-    values: urlSchema,
-  }),
-  recordBase.extend({
-    type: z.literal("wifi"),
-    values: wifiSchema,
-  }),
-  recordBase.extend({
-    type: z.literal("phone"),
-    values: phoneSchema,
-  }),
-  recordBase.extend({
-    type: z.literal("email"),
-    values: emailSchema,
-  }),
-  recordBase.extend({
-    type: z.literal("whatsapp"),
-    values: whatsappSchema,
-  }),
-  recordBase.extend({
-    type: z.literal("vcard"),
-    values: vcardSchema,
-  }),
-  recordBase.extend({
-    type: z.literal("text"),
-    values: textSchema,
-  }),
-]);
+export const qrRecordSchema = z
+  .discriminatedUnion("type", [
+    recordBase.extend({
+      type: z.literal("website"),
+      values: urlSchema,
+    }),
+    recordBase.extend({
+      type: z.literal("wifi"),
+      values: wifiSchema,
+    }),
+    recordBase.extend({
+      type: z.literal("phone"),
+      values: phoneSchema,
+    }),
+    recordBase.extend({
+      type: z.literal("email"),
+      values: emailSchema,
+    }),
+    recordBase.extend({
+      type: z.literal("whatsapp"),
+      values: whatsappSchema,
+    }),
+    recordBase.extend({
+      type: z.literal("vcard"),
+      values: vcardSchema,
+    }),
+    recordBase.extend({
+      type: z.literal("text"),
+      values: textSchema,
+    }),
+  ])
+  .superRefine((row, ctx) => {
+    if (row.isDynamic) {
+      if (!row.shortCode || !row.destinationUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Dynamic QR codes require shortCode and destinationUrl",
+        });
+      }
+    }
+  });
+
+/**
+ * Normalize a parsed backup record back to a full QRCodeRecord, filling the
+ * Phase 5 defaults for fields that older backup files do not contain.
+ */
+export function recordFromBackup(record: QRRecordInput): QRCodeRecord {
+  return {
+    ...record,
+    shortCode: record.shortCode ?? null,
+    destinationUrl: record.destinationUrl ?? null,
+    status: record.status ?? "active",
+  };
+}
 
 export const backupFileSchema = z.object({
   app: z.literal("qr-manager"),

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { SupabaseQRRepository } from "../cloud/supabase-repository";
 import type { CloudQRRow } from "../cloud/types";
 import { IndexedDBQRRepository } from "../storage/indexeddb";
-import type { QRCodeRecord, CreateQRCodeRecord } from "../storage/types";
+import type { QRCodeRecord, CreateQRCodeRecord, QRStatus } from "../storage/types";
 import { useSyncStore, type SyncStatusValue } from "../sync/sync-store";
 import { processQueue } from "../sync/sync-engine";
 import { createSyncOperation, type SyncOperation } from "../sync/types";
@@ -13,6 +13,13 @@ import {
   clearQueue,
 } from "../sync/queue-store";
 import { reconcileRecords } from "../sync/conflicts";
+import {
+  generateShortCode,
+  MAX_SHORT_CODE_ATTEMPTS,
+  DynamicQRError,
+  isUniqueViolation,
+  validateDynamicDestination,
+} from "../dynamic";
 
 const localRepo = new IndexedDBQRRepository();
 
@@ -42,6 +49,9 @@ function toCloudRow(record: QRCodeRecord): CloudQRRow {
     customization: record.customization,
     favorite: record.favorite,
     is_dynamic: record.isDynamic,
+    short_code: record.shortCode ?? null,
+    destination_url: record.destinationUrl ?? null,
+    status: record.status,
     created_at: record.createdAt,
     updated_at: record.updatedAt,
   };
@@ -89,6 +99,9 @@ async function processSingleOp(op: SyncOperation) {
         customization: row.customization,
         favorite: row.favorite,
         isDynamic: row.is_dynamic,
+        shortCode: row.short_code,
+        destinationUrl: row.destination_url,
+        status: row.status,
         updatedAt: row.updated_at,
       });
     } else {
@@ -100,6 +113,9 @@ async function processSingleOp(op: SyncOperation) {
         customization: row.customization,
         favorite: row.favorite,
         isDynamic: row.is_dynamic,
+        shortCode: row.short_code,
+        destinationUrl: row.destination_url,
+        status: row.status,
       });
     }
   } else if (op.operation === "UPDATE" && op.payload) {
@@ -114,6 +130,9 @@ async function processSingleOp(op: SyncOperation) {
         customization: row.customization,
         favorite: row.favorite,
         isDynamic: row.is_dynamic,
+        shortCode: row.short_code,
+        destinationUrl: row.destination_url,
+        status: row.status,
         updatedAt: row.updated_at,
       });
     }
@@ -131,7 +150,10 @@ export const qrService = {
   get,
   refresh,
   create,
+  createDynamic,
   update,
+  updateDynamicDestination,
+  setDynamicStatus,
   deleteRecord,
   pushLocalToCloud,
   syncNow,
@@ -233,6 +255,9 @@ async function pushLocalToCloud(
           customization: record.customization,
           isDynamic: record.isDynamic,
           favorite: record.favorite,
+          shortCode: record.shortCode,
+          destinationUrl: record.destinationUrl,
+          status: record.status,
         });
         pushed++;
       } catch {
@@ -253,6 +278,124 @@ async function syncNow(): Promise<QRCodeRecord[]> {
   await refreshPendingCount();
   const merged = await refresh();
   return merged;
+}
+
+/**
+ * Create a Dynamic QR code. Generates a fresh short code (cryptographically
+ * random), stores the record locally first (offline cache-first), then pushes
+ * it to Supabase when authenticated and online — retrying with a new code on a
+ * unique-constraint collision. The destination is validated before anything is
+ * written.
+ *
+ * @param preferredShortCode Optional code to try first (used so the on-screen
+ * preview matches what is printed). Collisions transparently fall back to a
+ * fresh code.
+ */
+async function createDynamic(
+  input: {
+    name: string;
+    destinationUrl: string;
+    customization: QRCodeRecord["customization"];
+    favorite?: boolean;
+    preferredShortCode?: string;
+  }
+): Promise<QRCodeRecord> {
+  const destination = validateDynamicDestination(input.destinationUrl);
+
+  for (let attempt = 0; attempt < MAX_SHORT_CODE_ATTEMPTS; attempt++) {
+    const shortCode = attempt === 0 && input.preferredShortCode
+      ? input.preferredShortCode
+      : generateShortCode();
+
+    const candidate: CreateQRCodeRecord = {
+      name: input.name,
+      type: "website",
+      values: { url: destination },
+      customization: input.customization,
+      isDynamic: true,
+      favorite: input.favorite ?? false,
+      shortCode,
+      destinationUrl: destination,
+      status: "active",
+    };
+
+    try {
+      const local = await localRepo.create(candidate);
+      if (!isAuthed()) return local;
+
+      if (!useSyncStore.getState().online) {
+        const op = createSyncOperation("CREATE", local.id, toCloudRow(local));
+        await enqueue(op);
+        await refreshPendingCount();
+        return local;
+      }
+
+      try {
+        await processSingleOp(createSyncOperation("CREATE", local.id, toCloudRow(local)));
+        await refreshPendingCount();
+        return local;
+      } catch (err) {
+        if (isUniqueViolation(err) && attempt < MAX_SHORT_CODE_ATTEMPTS - 1) {
+          // Short code collision on the cloud: undo the local write and retry
+          // with a fresh code before the user ever sees the record.
+          await localRepo.delete(local.id).catch(() => {});
+          continue;
+        }
+        if (isUniqueViolation(err)) {
+          await localRepo.delete(local.id).catch(() => {});
+          throw new DynamicQRError("SHORT_CODE_GENERATION_FAILED");
+        }
+        // Any other cloud failure: keep the local record and let the sync
+        // queue replay it later.
+        const op = createSyncOperation("CREATE", local.id, toCloudRow(local));
+        await enqueue(op);
+        await refreshPendingCount();
+        return local;
+      }
+    } catch (err) {
+      if (isUniqueViolation(err) && attempt < MAX_SHORT_CODE_ATTEMPTS - 1) {
+        continue;
+      }
+      if (isUniqueViolation(err)) {
+        throw new DynamicQRError("SHORT_CODE_GENERATION_FAILED");
+      }
+      throw err instanceof DynamicQRError ? err : new DynamicQRError("SYNC_REQUIRED");
+    }
+  }
+
+  throw new DynamicQRError("SHORT_CODE_GENERATION_FAILED");
+}
+
+/**
+ * Edit the destination of a Dynamic QR code. The short code is preserved: the
+ * same printed QR keeps redirecting to the new destination (updated_at is
+ * refreshed so conflict resolution favours the newest edit, never the code).
+ */
+async function updateDynamicDestination(
+  record: QRCodeRecord,
+  destinationUrl: string
+): Promise<QRCodeRecord> {
+  if (!record.isDynamic) {
+    throw new DynamicQRError("INVALID_DESTINATION", "Not a dynamic QR code");
+  }
+  const destination = validateDynamicDestination(destinationUrl);
+  const updated: QRCodeRecord = {
+    ...record,
+    values: { url: destination } as QRCodeRecord["values"],
+    destinationUrl: destination,
+  };
+  const saved = await update(updated);
+  return saved;
+}
+
+/** Enable or disable a Dynamic QR (active <-> disabled). Short code never changes. */
+async function setDynamicStatus(
+  record: QRCodeRecord,
+  status: QRStatus
+): Promise<QRCodeRecord> {
+  if (!record.isDynamic) return update(record);
+  const updated: QRCodeRecord = { ...record, status };
+  return update(updated);
 }
 
 /** For testing: clear local + cloud + sync queue. */

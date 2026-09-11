@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { cloudRowToLocalRecord, localRecordToCloudRow } from "./mappers";
+import { cloudRowToLocalRecord, localRecordToCloudRow, normalizeCloudRow } from "./mappers";
 import { validateCloudRow } from "./schemas";
 import type { CloudQRRow } from "./types";
 import type {
@@ -23,7 +23,7 @@ export class SupabaseQRRepository
   }
 
   private static toRecord(row: unknown): QRCodeRecord {
-    return cloudRowToLocalRecord(validateCloudRow(row));
+    return cloudRowToLocalRecord(normalizeCloudRow(validateCloudRow(row)));
   }
 
   async list(): Promise<QRCodeRecord[]> {
@@ -63,6 +63,9 @@ export class SupabaseQRRepository
         customization: record.customization,
         favorite: record.favorite,
         is_dynamic: record.isDynamic,
+        short_code: record.shortCode ?? null,
+        destination_url: record.destinationUrl ?? null,
+        status: record.status,
       } as never)
       .eq("id", record.id)
       .select("*")

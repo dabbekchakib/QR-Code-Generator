@@ -102,8 +102,13 @@ export function QRCard({ record, onToggleFavorite, onDuplicate, onDelete }: QRCa
 
           <div className="flex items-center gap-2 mt-3">
             <Badge variant="secondary" className="text-[10px] px-1.5">
-              Static
+              {record.isDynamic ? t("library.status.dynamic") : t("library.status.static")}
             </Badge>
+            {record.isDynamic && record.status === "disabled" && (
+              <Badge variant="outline" className="text-[10px] px-1.5 text-muted-foreground">
+                {t("detail.statusDisabled")}
+              </Badge>
+            )}
             <div className="flex-1" />
 
             {/* Download dropdown */}

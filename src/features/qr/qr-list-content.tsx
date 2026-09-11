@@ -35,7 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { qrTypes } from "@/features/qr/qr-types-config";
 
-const statusFilters: QRStatusFilter[] = ["all", "static", "favorites"];
+const statusFilters: QRStatusFilter[] = ["all", "static", "dynamic", "favorites"];
 
 export function QRListContent() {
   const { t } = useI18n();
@@ -98,6 +98,9 @@ export function QRListContent() {
           customization: parsed.customization,
           isDynamic: parsed.isDynamic,
           favorite: parsed.favorite,
+          shortCode: parsed.shortCode ?? null,
+          destinationUrl: parsed.destinationUrl ?? null,
+          status: parsed.status ?? "active",
         });
         count++;
       }
@@ -133,6 +136,11 @@ export function QRListContent() {
       type: copy.type,
       values: copy.values,
       customization: copy.customization,
+      isDynamic: copy.isDynamic,
+      favorite: copy.favorite,
+      shortCode: copy.shortCode ?? null,
+      destinationUrl: copy.destinationUrl ?? null,
+      status: copy.status,
     });
     showToast({
       title: t("library.duplicated"),

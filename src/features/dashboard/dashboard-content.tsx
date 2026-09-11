@@ -13,13 +13,15 @@ import {
   ScanLine,
   ArrowRight,
   Star,
-  BarChart3,
+  Globe,
+  Power,
 } from "lucide-react";
 import { useI18n } from "@/i18n/provider";
 import { formatUpdatedAt } from "@/features/qr/storage";
 
 function RecentQRCard({ id }: { id: string }) {
   const { records } = useQRs();
+  const { t } = useI18n();
   const record = records.find((r) => r.id === id);
 
   const content = useQRContent(record ?? null);
@@ -58,7 +60,9 @@ function RecentQRCard({ id }: { id: string }) {
                 {typeName} • {formatUpdatedAt(record.updatedAt)}
               </p>
               <Badge variant="secondary" className="mt-1.5 text-[10px]">
-                Static
+                {record.isDynamic
+                  ? t("library.status.dynamic")
+                  : t("library.status.static")}
               </Badge>
             </div>
             <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors mt-1 shrink-0" />
@@ -72,11 +76,6 @@ function RecentQRCard({ id }: { id: string }) {
 export function DashboardContent() {
   const { t } = useI18n();
   const { records, loading } = useQRs();
-
-  const favoriteCount = useMemo(
-    () => records.filter((r) => r.favorite).length,
-    [records]
-  );
 
   const recent = useMemo(
     () =>
@@ -97,20 +96,30 @@ export function DashboardContent() {
       bgColor: "bg-primary/10",
     },
     {
-      title: t("dashboard.totalScans"),
-      value: "—",
-      valueLabel: t("dashboard.scansComing"),
-      icon: ScanLine,
-      color: "text-emerald-500",
-      bgColor: "bg-emerald-500/10",
+      title: t("dashboard.totalStatic"),
+      value: loading ? "..." : records.filter((r) => !r.isDynamic).length.toLocaleString(),
+      valueLabel: t("library.status.static"),
+      icon: QrCode,
+      color: "text-slate-500",
+      bgColor: "bg-slate-500/10",
     },
     {
-      title: t("dashboard.totalQRCodes") + " · ⭐",
-      value: loading ? "..." : favoriteCount.toLocaleString(),
-      valueLabel: t("library.status.favorites"),
-      icon: Star,
-      color: "text-amber-500",
-      bgColor: "bg-amber-500/10",
+      title: t("dashboard.totalDynamic"),
+      value: loading ? "..." : records.filter((r) => r.isDynamic).length.toLocaleString(),
+      valueLabel: t("library.status.dynamic"),
+      icon: Globe,
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+    },
+    {
+      title: t("dashboard.activeDynamic"),
+      value: loading
+        ? "..."
+        : records.filter((r) => r.isDynamic && r.status === "active").length.toLocaleString(),
+      valueLabel: t("detail.statusActive"),
+      icon: Power,
+      color: "text-emerald-500",
+      bgColor: "bg-emerald-500/10",
     },
   ];
 
@@ -126,7 +135,7 @@ export function DashboardContent() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => (
           <Card key={stat.title}>
             <CardContent className="p-5">
@@ -152,20 +161,44 @@ export function DashboardContent() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Scans Overview Placeholder */}
+        {/* Dynamic QR summary */}
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="size-4 text-muted-foreground" />
-              {t("dashboard.scansOverview")}
+              <Globe className="size-4 text-muted-foreground" />
+              {t("features.dynamicTitle")}
             </CardTitle>
+            <Button size="sm" render={<Link href="/create" />} nativeButton={false}>
+              {t("create.dynamicOption")}
+              <ArrowRight className="size-3" />
+            </Button>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-center justify-center flex-col gap-3 border-2 border-dashed rounded-xl">
-              <ScanLine className="size-8 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground text-center px-6">
-                {t("dashboard.scansComing")}
-              </p>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-2xl font-bold text-foreground">
+                  {loading ? "..." : records.filter((r) => !r.isDynamic).length.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.totalStatic")}</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">
+                  {loading ? "..." : records.filter((r) => r.isDynamic).length.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.totalDynamic")}</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">
+                  {loading
+                    ? "..."
+                    : records.filter((r) => r.isDynamic && r.status === "active").length.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.activeDynamic")}</p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-start gap-2 text-xs text-muted-foreground border-t border-border pt-4">
+              <ScanLine className="size-3.5 mt-0.5 shrink-0" />
+              <p>{t("dashboard.scansComing")}</p>
             </div>
           </CardContent>
         </Card>

@@ -22,12 +22,13 @@ import {
 } from "./types";
 import { urlSchema, wifiSchema, phoneSchema, emailSchema, whatsappSchema, vcardSchema, textSchema } from "./schemas";
 import { cn } from "@/lib/utils";
-import { RotateCcw, Settings2, QrCode, Shield, Save, Lock } from "lucide-react";
+import { RotateCcw, Settings2, QrCode, Shield, Save, Lock, Globe } from "lucide-react";
 import { useI18n } from "@/i18n/provider";
 import { useToast } from "@/lib/toast-store";
 import { qrService } from "./service/qr-service";
 import type { QRCodeRecord } from "./storage";
 import { getDefaultName } from "./storage";
+import { generateShortCode, isSafeDestination, getDynamicQRUrlWithFallback, DynamicQRError } from "./dynamic";
 import {
   Dialog,
   DialogContent,
@@ -84,10 +85,25 @@ export function CreateQRContent() {
   const [editedRecord, setEditedRecord] = useState<QRCodeRecord | null>(null);
   const loadedRef = useRef(false);
 
+  const [shareMode, setShareMode] = useState<"static" | "dynamic">("static");
+  const [destination, setDestination] = useState("");
+  const [destinationError, setDestinationError] = useState<string | null>(null);
+  const [draftShortCode] = useState(() => generateShortCode());
+  const isDynamicMode = shareMode === "dynamic";
+
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [recordName, setRecordName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+
+  const handleModeSelect = useCallback((mode: "static" | "dynamic") => {
+    setShareMode(mode);
+    setDestinationError(null);
+    if (mode === "dynamic") {
+      setSelectedType("website");
+      setCustomization(DEFAULT_CUSTOMIZATION);
+    }
+  }, []);
 
   const handleTypeSelect = useCallback((type: QRType) => {
     setSelectedType(type);
@@ -99,7 +115,14 @@ export function CreateQRContent() {
     setValues(newValues);
   }, []);
 
+  const destinationValid = isDynamicMode && destination.trim() !== "" && isSafeDestination(destination);
+  const permanentUrl = isDynamicMode ? getDynamicQRUrlWithFallback(draftShortCode) : "";
+
   const { qrContent, errors } = useMemo(() => {
+    if (isDynamicMode) {
+      if (!destinationValid) return { qrContent: "", errors: {} as Record<string, string> };
+      return { qrContent: permanentUrl, errors: {} as Record<string, string> };
+    }
     if (!selectedType) return { qrContent: "", errors: {} as Record<string, string> };
     const schema = getSchema(selectedType);
     const result = schema.safeParse(values);
@@ -111,14 +134,17 @@ export function CreateQRContent() {
     } catch {
       return { qrContent: "", errors: {} };
     }
-  }, [selectedType, values]);
+  }, [isDynamicMode, destinationValid, permanentUrl, selectedType, values]);
 
   const handleReset = useCallback(() => {
-    if (selectedType) {
+    if (isDynamicMode) {
+      setDestination("");
+      setDestinationError(null);
+    } else if (selectedType) {
       setValues(getDefaultValues(selectedType));
     }
     setCustomization(DEFAULT_CUSTOMIZATION);
-  }, [selectedType]);
+  }, [isDynamicMode, selectedType]);
 
   useEffect(() => {
     if (!editParam || loadedRef.current) return;
@@ -129,10 +155,14 @@ export function CreateQRContent() {
       if (record) {
         loadedRef.current = true;
         setEditedRecord(record);
+        setShareMode(record.isDynamic ? "dynamic" : "static");
         setSelectedType(record.type);
         setValues(record.values as AnyFormValues);
         setCustomization(record.customization);
         setRecordName(record.name);
+        if (record.isDynamic) {
+          setDestination(record.destinationUrl ?? "");
+        }
       }
     })();
     return () => {
@@ -140,7 +170,7 @@ export function CreateQRContent() {
     };
   }, [editParam]);
 
-  const canSave = isEditing ? !!qrContent : !!qrContent;
+  const canSave = isDynamicMode ? destinationValid : !!qrContent;
 
   const openSaveDialog = () => {
     setRecordName(editedRecord?.name ?? getDefaultName(selectedType ?? "website"));
@@ -154,25 +184,54 @@ export function CreateQRContent() {
       setNameError(t("create.nameRequired"));
       return;
     }
+    if (isDynamicMode && !destinationValid) {
+      setDestinationError(t("dynamicQr.errInvalidDestination"));
+      setShowSaveDialog(false);
+      return;
+    }
     if (!selectedType) return;
     setSaveState("saving");
     setNameError(null);
+    setDestinationError(null);
     try {
       if (editedRecord) {
-        const updated: QRCodeRecord = {
-          ...editedRecord,
-          name,
-          type: selectedType,
-          values,
-          customization,
-          isDynamic: false,
-          updatedAt: new Date().toISOString(),
-        };
-        await qrService.update(updated);
-        showToast({ title: isEditing ? t("create.saved") : t("create.saved"), variant: "success" });
+        if (editedRecord.isDynamic) {
+          const updated: QRCodeRecord = {
+            ...editedRecord,
+            name,
+            values: { url: destination.trim() },
+            destinationUrl: destination.trim(),
+            customization,
+            updatedAt: new Date().toISOString(),
+          };
+          await qrService.update(updated);
+        } else {
+          const updated: QRCodeRecord = {
+            ...editedRecord,
+            name,
+            type: selectedType,
+            values,
+            customization,
+            isDynamic: false,
+            updatedAt: new Date().toISOString(),
+          };
+          await qrService.update(updated);
+        }
+        showToast({ title: t("create.saved"), variant: "success" });
         setSaveState("saved");
         setShowSaveDialog(false);
-        router.push(`/qrs/${updated.id}`);
+        router.push(`/qrs/${editedRecord.id}`);
+      } else if (isDynamicMode) {
+        const created = await qrService.createDynamic({
+          name,
+          destinationUrl: destination.trim(),
+          customization,
+          preferredShortCode: draftShortCode,
+        });
+        showToast({ title: t("create.saved"), variant: "success" });
+        setSaveState("saved");
+        setShowSaveDialog(false);
+        router.push(`/qrs/${created.id}`);
       } else {
         const created = await qrService.create({
           name,
@@ -186,7 +245,17 @@ export function CreateQRContent() {
         setShowSaveDialog(false);
         router.push(`/qrs/${created.id}`);
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof DynamicQRError) {
+        setDestinationError(
+          err.code === "INVALID_DESTINATION"
+            ? t("dynamicQr.errInvalidDestination")
+            : err.code === "SHORT_CODE_COLLISION"
+              ? t("dynamicQr.errShortCodeCollision")
+              : t("dynamicQr.errShortCodeGeneration")
+        );
+      }
+      if (isDynamicMode) setShowSaveDialog(false);
       setSaveState("error");
     }
   };
@@ -216,44 +285,120 @@ export function CreateQRContent() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {qrTypes.map((type) => {
-              const isSelected = selectedType === type.type;
-              const isLocked = isEditing && !!editedRecord && type.type === editedRecord.type;
-              return (
+          {!isEditing && (
+            <div className="mb-4">
+              <div className="inline-flex rounded-lg border border-border p-0.5" role="tablist" aria-label={t("create.shareType")}>
                 <button
-                  key={type.type}
-                  onClick={() => handleTypeSelect(type.type)}
-                  disabled={isEditing && !!editedRecord}
+                  role="tab"
+                  aria-selected={!isDynamicMode}
+                  onClick={() => handleModeSelect("static")}
                   className={cn(
-                    "flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all text-center",
-                    isSelected
-                      ? "border-primary bg-primary/5 shadow-sm"
-                      : "border-border hover:border-primary/30 hover:bg-muted/50",
-                    isEditing && !!editedRecord && "opacity-60 cursor-not-allowed"
+                    "px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2",
+                    !isDynamicMode
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <div
+                  {t("create.staticOption")}
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={isDynamicMode}
+                  onClick={() => handleModeSelect("dynamic")}
+                  className={cn(
+                    "px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2",
+                    isDynamicMode
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t("create.dynamicOption")}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isDynamicMode && (
+            <div className="mb-4 space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+              <div className="space-y-1.5">
+                <label htmlFor="dynamic-destination" className="text-sm font-medium">
+                  {t("create.destinationLabel")} <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  id="dynamic-destination"
+                  type="url"
+                  inputMode="url"
+                  value={destination}
+                  onChange={(e) => {
+                    setDestination(e.target.value);
+                    setDestinationError(null);
+                  }}
+                  placeholder={t("create.destinationPlaceholder")}
+                  aria-invalid={!!destinationError}
+                  aria-describedby={destinationError ? "dynamic-destination-error" : undefined}
+                />
+                {destinationError && (
+                  <p id="dynamic-destination-error" className="text-xs text-destructive" role="alert">
+                    {destinationError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-start gap-2 rounded-lg bg-card border border-border p-3">
+                <Globe className="size-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-foreground">{t("create.permanentUrl")}</p>
+                  <p className="text-xs text-muted-foreground break-all mt-0.5" dir="ltr">
+                    {permanentUrl}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">{t("create.permanentUrlDesc")}</p>
+              <p className="text-xs text-muted-foreground">{t("create.dynamicBenefit")}</p>
+            </div>
+          )}
+
+          {!isDynamicMode && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {qrTypes.map((type) => {
+                const isSelected = selectedType === type.type;
+                const isLocked = isEditing && !!editedRecord && type.type === editedRecord.type;
+                return (
+                  <button
+                    key={type.type}
+                    onClick={() => handleTypeSelect(type.type)}
+                    disabled={isEditing && !!editedRecord}
                     className={cn(
-                      "size-11 rounded-xl flex items-center justify-center transition-colors",
-                      isSelected ? "bg-primary/10 text-primary" : type.color
+                      "flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all text-center",
+                      isSelected
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border hover:border-primary/30 hover:bg-muted/50",
+                      isEditing && !!editedRecord && "opacity-60 cursor-not-allowed"
                     )}
                   >
-                    <type.icon className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {t(`qrTypes.${type.type}.name`)}
-                      {isLocked && <Lock className="inline size-3 ml-1 text-muted-foreground" />}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {t(type.descKey)}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                    <div
+                      className={cn(
+                        "size-11 rounded-xl flex items-center justify-center transition-colors",
+                        isSelected ? "bg-primary/10 text-primary" : type.color
+                      )}
+                    >
+                      <type.icon className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {t(`qrTypes.${type.type}.name`)}
+                        {isLocked && <Lock className="inline size-3 ml-1 text-muted-foreground" />}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {t(type.descKey)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {isEditing && editedRecord && (
             <p className="text-xs text-muted-foreground mt-3">{t("create.editNote")}</p>
           )}
@@ -265,24 +410,26 @@ export function CreateQRContent() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Left: Form */}
           <div className="lg:col-span-3 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <span className="size-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">
-                    2
-                  </span>
-                  {t("create.configure")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <QRForm
-                  type={selectedType}
-                  values={values}
-                  onChange={handleValuesChange}
-                  errors={errors}
-                />
-              </CardContent>
-            </Card>
+            {!isDynamicMode && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <span className="size-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">
+                      2
+                    </span>
+                    {t("create.configure")}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <QRForm
+                    type={selectedType}
+                    values={values}
+                    onChange={handleValuesChange}
+                    errors={errors}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>

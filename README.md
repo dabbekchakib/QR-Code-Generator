@@ -6,7 +6,18 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 4 (Current)
+### Phase 5 (Current)
+- **Dynamic QR codes** — toggle between **Static** and **Dynamic** when saving (`/create`); dynamic codes get a permanent public URL `https://<APP_URL>/qr/<shortCode>` that always redirects to the latest destination
+- **Editable destinations** — update the target URL of a dynamic code at any time without changing the shareable short URL (`/qrs/[id]`)
+- **Disable / Enable** — dynamic codes can be turned off (public page returns **410 Gone**) and back on
+- **Public redirect route** — server-side `src/app/qr/[shortCode]/route.ts` resolves via a `SECURITY DEFINER` Postgres function (`resolve_dynamic_qr`, migration 03) and returns **302** (active), **410** (disabled), **404** (missing or static), **400** (invalid code), **503** (temporary); responses are self-contained localized HTML (FR/EN/AR with RTL) and `noindex, nofollow`
+- **Secure short codes** — 8-char URL-safe alphabet (no `0/O/1/l/I`), unique-index enforced, `createDynamic` auto-regenerates on collision (max 5 attempts)
+- **Offline-first** — dynamic codes created offline are queued with their short code and destination, and replayed on reconnect like any other mutation
+- **Duplicate** — duplicating a dynamic code generates a fresh short code (target URL is preserved)
+- **Dashboard** — stat cards for Total/Static/Dynamic/Active-Dynamic and a Dynamic QR summary card
+- **Unit tests** — dynamic module (short codes, destination validation, create/update/disable, collision retry, offline queue) plus cloud-mapper and backup schema coverage
+
+### Phase 4
 - **Accounts (optional)** — email/password sign up, sign in, password reset via Supabase Auth (`/login`, `/register`, `/forgot-password`, `/reset-password`). The app remains **fully usable without an account** — auth is purely additive.
 - **Cloud sync** — QR Codes stored in an IndexedDB-first cache that syncs to Postgres (`qr_codes` + `profiles` tables with row-level security) on every change, when online and signed in
 - **Offline queue** — mutations made offline are queued locally and replayed in order on reconnect; edits coalesce (create+update/delete collapse)
@@ -64,11 +75,9 @@ Create, customize and manage QR Codes from one simple, free application.
 - TypeScript strict mode
 
 ### Upcoming Phases
-- Dynamic QR codes
 - QR Code logos & advanced styles (Rounded, Dots)
 - Scan tracking & analytics
 - Templates system
-- Public QR redirect API
 
 ## Tech Stack
 
@@ -105,6 +114,8 @@ src/
 │   ├── layout.tsx          # Root layout
 │   ├── providers.tsx       # Theme, i18n, SW providers
 │   ├── page.tsx            # Landing page
+│   ├── qr/
+│   │   └── [shortCode]/    # Public dynamic QR redirect route
 │   └── not-found.tsx       # 404 page
 ├── components/             # Reusable UI components
 │   ├── ui/                 # shadcn/ui components
@@ -124,6 +135,7 @@ src/
 │       ├── storage/         # QRCodeRecord, IndexedDB repository, sync queue DB, backup, utils
 │       ├── cloud/           # Supabase repository, mappers, row validation
 │       ├── sync/            # sync queue store, conflict resolution, sync engine
+│       ├── dynamic/         # short codes, destination validation, public-page renderer, public URL
 │       ├── service/         # qr-service orchestration (local cache + cloud + queue)
 │       ├── lib/             # qr-generator, qr-renderer, qr-download, qr-clipboard
 │       ├── __tests__/       # Unit tests
@@ -194,9 +206,10 @@ npm install
    ```
    NEXT_PUBLIC_SUPABASE_URL=your-project-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   NEXT_PUBLIC_APP_URL=http://localhost:3000  # your public origin (permanent QR link)
    ```
 
-3. Apply the migrations in `supabase/migrations/` (creates `profiles` and `qr_codes` tables with row-level security).
+3. Apply the migrations in `supabase/migrations/` (creates `profiles` and `qr_codes` tables with row-level security; migration 03 adds the dynamic QR fields and the `resolve_dynamic_qr` resolver function).
 
 Without this config the app still works fully locally, in anonymous mode.
 
@@ -233,6 +246,12 @@ Navigate to `/create`, pick a type, fill in the fields — the QR code updates l
 
 Click **Save QR** to name and store it locally, or open an existing code for editing via `/create?edit=<id>`.
 
+### Dynamic QR codes
+
+- Choose **Static** (the QR encodes the final content forever) or **Dynamic** (the QR encodes a permanent URL) when saving.
+- For dynamic codes, the generated QR points to a permanent link `https://<APP_URL>/qr/<shortCode>`; scanners are redirected to the current destination, so you can change it anytime without re-printing the code.
+- Manage dynamic codes from the detail page: copy the permanent URL, **Edit destination**, or **Disable / Enable**.
+
 ### Accounts & Sync
 
 - **Sign up / Sign in** (`/login`, `/register`) — email/password. Password reset via `/forgot-password`.
@@ -242,8 +261,8 @@ Click **Save QR** to name and store it locally, or open an existing code for edi
 
 ### Managing QR Codes
 
-- **Library** (`/qrs`) — search, filter (All/Static/Favorites), filter by type, and sort your codes. Export/Import JSON backups from the header.
-- **Detail** (`/qrs/[id]`) — preview the code, download PNG/SVG, copy/share the content, toggle favorite, and edit/duplicate/delete.
+- **Library** (`/qrs`) — search, filter (All/Static/Dynamic/Favorites), filter by type, and sort your codes. Export/Import JSON backups from the header.
+- **Detail** (`/qrs/[id]`) — preview the code, download PNG/SVG, copy/share the content, toggle favorite, and edit/duplicate/delete. Dynamic codes add permanent URL copy, destination editing, and disable/enable.
 - **Settings → Local Data** — export a backup file, import one, or clear all locally stored QR Codes.
 
 ## PWA

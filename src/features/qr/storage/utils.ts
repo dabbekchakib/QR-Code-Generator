@@ -1,5 +1,6 @@
 import type { QRCodeRecord, QRSortOption, QRStatusFilter } from "./types";
 import type { QRType } from "@/types";
+import { generateShortCode } from "../dynamic";
 
 export interface QRSearchOptions {
   search?: string;
@@ -18,6 +19,8 @@ function matchesStatus(record: QRCodeRecord, status: QRStatusFilter): boolean {
       return true;
     case "static":
       return !record.isDynamic;
+    case "dynamic":
+      return record.isDynamic;
     case "favorites":
       return record.favorite;
   }
@@ -74,6 +77,8 @@ export function duplicateRecord(record: QRCodeRecord): QRCodeRecord {
         ? crypto.randomUUID()
         : `qr-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     name: `${existing} Copy`,
+    // A duplicate is a brand new QR: it must never reuse the short code.
+    ...(record.isDynamic ? { shortCode: generateShortCode() } : {}),
     favorite: false,
     createdAt: now,
     updatedAt: now,

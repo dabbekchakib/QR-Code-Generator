@@ -3,15 +3,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { renderQRToDataURL } from "../lib/qr-renderer";
 import { generateQRContent } from "../lib/qr-generator";
+import { getDynamicQRUrlWithFallback } from "../dynamic";
 import type { QRCodeRecord } from "../storage";
 import type { QRType } from "@/types";
 import { useI18n } from "@/i18n/provider";
 
 const PREVIEW_SIZE = 320;
 
+/**
+ * The content that ends up inside the QR graphic. For dynamic QR codes that is
+ * ALWAYS the permanent public URL — never the destination — so the printed QR
+ * keeps working when the destination is edited.
+ */
 export function useQRContent(record: QRCodeRecord | null): string {
   return useMemo(() => {
     if (!record) return "";
+    if (record.isDynamic && record.shortCode) {
+      return getDynamicQRUrlWithFallback(record.shortCode);
+    }
     try {
       return generateQRContent(record.type, record.values);
     } catch {

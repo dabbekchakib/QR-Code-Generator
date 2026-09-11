@@ -5,7 +5,7 @@ import {
 } from "../cloud/mappers";
 import { validateCloudRow, cloudQRRowSchema } from "../cloud/schemas";
 
-function makeCloudRow(overrides: Record<string, unknown> = {}) {
+function makeCloudRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: "qr-1",
     user_id: "user-1",
@@ -31,6 +31,24 @@ function makeCloudRow(overrides: Record<string, unknown> = {}) {
 describe("cloudQRRowSchema", () => {
   it("accepts a valid website row", () => {
     expect(cloudQRRowSchema.safeParse(makeCloudRow()).success).toBe(true);
+  });
+
+  it("accepts legacy rows without the Phase 5 fields", () => {
+    const { short_code: _sc, destination_url: _du, status: _st, ...legacy } = makeCloudRow();
+    expect(cloudQRRowSchema.safeParse(legacy).success).toBe(true);
+  });
+
+  it("requires a short code and destination for dynamic rows", () => {
+    const dynamic = makeCloudRow({ is_dynamic: true });
+    expect(cloudQRRowSchema.safeParse(dynamic).success).toBe(false);
+    expect(
+      cloudQRRowSchema.safeParse({
+        ...dynamic,
+        short_code: "Ab2cDe9F",
+        destination_url: "https://menu.example",
+        status: "active",
+      }).success
+    ).toBe(true);
   });
 
   it("rejects a row with an unknown type", () => {
@@ -81,5 +99,25 @@ describe("mapCloudRow <-> local record", () => {
     const row = localRecordToCloudRow(original, "user-1");
     const back = cloudRowToLocalRecord(row);
     expect(back).toEqual(original);
+  });
+
+  it("round-trips a dynamic record through both mappers", () => {
+    const cloud = makeCloudRow({
+      is_dynamic: true,
+      short_code: "Ab2cDe9F",
+      destination_url: "https://menu.example",
+      status: "disabled",
+    });
+    const local = cloudRowToLocalRecord(cloud as never);
+    expect(local.shortCode).toBe("Ab2cDe9F");
+    expect(local.destinationUrl).toBe("https://menu.example");
+    expect(local.status).toBe("disabled");
+
+    const row = localRecordToCloudRow(local, "user-1");
+    expect(row.short_code).toBe("Ab2cDe9F");
+    expect(row.destination_url).toBe("https://menu.example");
+    expect(row.status).toBe("disabled");
+
+    expect(cloudRowToLocalRecord(row)).toEqual(local);
   });
 });

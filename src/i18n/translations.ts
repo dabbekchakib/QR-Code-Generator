@@ -149,6 +149,9 @@ const messages: Record<Locale, NestedMessages> = {
     },
     dashboard: {
       totalQRCodes: "Total QR Codes",
+      totalStatic: "QR Statiques",
+      totalDynamic: "QR Dynamiques",
+      activeDynamic: "Dynamiques actifs",
       totalScans: "Total Scans",
       todayScans: "Aujourd'hui",
       scansOverview: "Aperçu des scans",
@@ -168,6 +171,18 @@ const messages: Record<Locale, NestedMessages> = {
       label: "Libellé",
       isDynamic: "QR Dynamique",
       dynamicDesc: "Permet de modifier le contenu et suivre les scans",
+      shareType: "Type de QR",
+      staticOption: "Statique",
+      dynamicOption: "Dynamique",
+      destinationLabel: "URL de destination",
+      destinationPlaceholder: "https://example.com/votre-lien",
+      destinationRequired: "L'URL de destination est obligatoire",
+      destinationInvalid: "Veuillez saisir une URL valide (http ou https).",
+      permanentUrl: "URL permanente",
+      permanentUrlDesc:
+        "Ce lien ne changera jamais. Le QR redirige vers la destination choisie.",
+      dynamicBenefit:
+        "Modifiez la destination quand vous voulez, sans recréer le QR.",
       typeofStep: "Type",
       chooseType: "Choisir le type",
       configure: "Configurer",
@@ -196,6 +211,7 @@ const messages: Record<Locale, NestedMessages> = {
       status: {
         all: "Tout",
         static: "Statiques",
+        dynamic: "Dynamiques",
         favorites: "Favoris",
       },
       type: {
@@ -251,6 +267,35 @@ const messages: Record<Locale, NestedMessages> = {
       edit: "Modifier",
       duplicate: "Dupliquer",
       delete: "Supprimer",
+      permanentUrlLabel: "URL permanente",
+      permanentUrlCopied: "URL permanente copiée",
+      editDestination: "Modifier la destination",
+      destinationLabel: "URL de destination",
+      destinationSaved: "Destination mise à jour",
+      destinationFailed: "Impossible de mettre à jour la destination",
+      disable: "Désactiver",
+      enable: "Activer",
+      statusActive: "Actif",
+      statusDisabled: "Désactivé",
+      visibilityDesc:
+        "Lorsque le QR est désactivé, son URL permanente répond avec un code 410 (Gone).",
+      pendingSync: "En attente de synchronisation",
+      published: "Publié",
+      notPublished: "Non publié",
+      disableDialog: {
+        title: "Désactiver ce QR ?",
+        description:
+          "Son URL permanente cessera de rediriger jusqu'à ce que vous le réactiviez.",
+        cancel: "Annuler",
+        confirm: "Désactiver",
+      },
+      enableDialog: {
+        title: "Activer ce QR ?",
+        description:
+          "Son URL permanente redirigera à nouveau vers la destination.",
+        cancel: "Annuler",
+        confirm: "Activer",
+      },
       deleteDialog: {
         title: "Supprimer ce QR Code ?",
         description: "Cette action est irréversible.",
@@ -304,6 +349,23 @@ const messages: Record<Locale, NestedMessages> = {
       pwaTitle: "PWA / Hors ligne",
       pwaDesc:
         "Utilisez l'application même sans connexion internet.",
+    },
+    dynamicQr: {
+      errDestinationRequired: "L'URL de destination est obligatoire.",
+      errInvalidDestination: "Veuillez saisir une URL valide (http ou https).",
+      errShortCodeCollision: "Code déjà utilisé. Réessayez.",
+      errShortCodeGeneration: "Impossible de générer un code unique. Réessayez.",
+      syncRequired:
+        "La synchronisation est requise pour publier votre QR dynamique.",
+      qrNotFoundTitle: "QR Code introuvable",
+      qrNotFoundDesc: "Ce lien ne correspond à aucun QR Code actif.",
+      qrDisabledTitle: "QR Code désactivé",
+      qrDisabledDesc: "Ce QR Code a été désactivé par son créateur.",
+      invalidDestinationTitle: "URL de destination invalide",
+      invalidDestinationDesc: "La destination de ce QR Code n'est pas valide.",
+      temporaryErrorTitle: "Erreur temporaire",
+      temporaryErrorDesc:
+        "Impossible de traiter votre demande. Réessayez plus tard.",
     },
   },
   en: {
@@ -449,6 +511,9 @@ const messages: Record<Locale, NestedMessages> = {
     },
     dashboard: {
       totalQRCodes: "Total QR Codes",
+      totalStatic: "Static QR Codes",
+      totalDynamic: "Dynamic QR Codes",
+      activeDynamic: "Active dynamic",
       totalScans: "Total Scans",
       todayScans: "Today",
       scansOverview: "Scans Overview",
@@ -468,6 +533,18 @@ const messages: Record<Locale, NestedMessages> = {
       label: "Label",
       isDynamic: "Dynamic QR",
       dynamicDesc: "Modify content and track scans",
+      shareType: "QR type",
+      staticOption: "Static",
+      dynamicOption: "Dynamic",
+      destinationLabel: "Destination URL",
+      destinationPlaceholder: "https://example.com/your-link",
+      destinationRequired: "Destination URL is required",
+      destinationInvalid: "Please enter a valid URL (http or https).",
+      permanentUrl: "Permanent URL",
+      permanentUrlDesc:
+        "This URL never changes. The QR redirects to the chosen destination.",
+      dynamicBenefit:
+        "Change the destination anytime without recreating the QR.",
       chooseType: "Choose Type",
       configure: "Configure",
       customize: "Customize",
@@ -496,6 +573,7 @@ const messages: Record<Locale, NestedMessages> = {
       status: {
         all: "All",
         static: "Static",
+        dynamic: "Dynamic",
         favorites: "Favorites",
       },
       type: {
@@ -551,6 +629,34 @@ const messages: Record<Locale, NestedMessages> = {
       edit: "Edit",
       duplicate: "Duplicate",
       delete: "Delete",
+      permanentUrlLabel: "Permanent URL",
+      permanentUrlCopied: "Permanent URL copied",
+      editDestination: "Edit destination",
+      destinationLabel: "Destination URL",
+      destinationSaved: "Destination updated",
+      destinationFailed: "Unable to update destination",
+      disable: "Disable",
+      enable: "Enable",
+      statusActive: "Active",
+      statusDisabled: "Disabled",
+      visibilityDesc:
+        "When the QR is disabled, its permanent URL responds with a 410 (Gone).",
+      pendingSync: "Waiting for sync",
+      published: "Published",
+      notPublished: "Not published",
+      disableDialog: {
+        title: "Disable this QR?",
+        description:
+          "Its permanent URL will stop redirecting until you re-enable it.",
+        cancel: "Cancel",
+        confirm: "Disable",
+      },
+      enableDialog: {
+        title: "Enable this QR?",
+        description: "Its permanent URL will redirect to the destination again.",
+        cancel: "Cancel",
+        confirm: "Enable",
+      },
       deleteDialog: {
         title: "Delete this QR Code?",
         description: "This action cannot be undone.",
@@ -603,6 +709,21 @@ const messages: Record<Locale, NestedMessages> = {
       pwaTitle: "PWA / Offline",
       pwaDesc:
         "Use the app even without an internet connection.",
+    },
+    dynamicQr: {
+      errDestinationRequired: "Destination URL is required.",
+      errInvalidDestination: "Enter a valid URL (http or https).",
+      errShortCodeCollision: "Code already in use. Try again.",
+      errShortCodeGeneration: "Unable to generate a unique code. Try again.",
+      syncRequired: "Sync is required to publish your dynamic QR.",
+      qrNotFoundTitle: "QR Code not found",
+      qrNotFoundDesc: "This link does not match any active QR Code.",
+      qrDisabledTitle: "QR Code disabled",
+      qrDisabledDesc: "This QR Code was disabled by its creator.",
+      invalidDestinationTitle: "Invalid destination URL",
+      invalidDestinationDesc: "The destination of this QR Code is not valid.",
+      temporaryErrorTitle: "Temporary error",
+      temporaryErrorDesc: "We could not process your request. Try again later.",
     },
   },
   ar: {
@@ -747,6 +868,9 @@ const messages: Record<Locale, NestedMessages> = {
     },
     dashboard: {
       totalQRCodes: "اجمالي QR Codes",
+      totalStatic: "رموز QR الثابتة",
+      totalDynamic: "رموز QR الديناميكية",
+      activeDynamic: "ديناميكية نشطة",
       totalScans: "اجمالي المسح",
       todayScans: "اليوم",
       scansOverview: "نظرة عامة على المسح",
@@ -766,6 +890,17 @@ const messages: Record<Locale, NestedMessages> = {
       label: "العنوان",
       isDynamic: "QR ديناميكي",
       dynamicDesc: "تعديل المحتوى وتتبع عمليات المسح",
+      shareType: "نوع QR",
+      staticOption: "ثابت",
+      dynamicOption: "ديناميكي",
+      destinationLabel: "رابط الوجهة",
+      destinationPlaceholder: "https://example.com/your-link",
+      destinationRequired: "رابط الوجهة مطلوب",
+      destinationInvalid: "أدخل رابطا صالحا (http أو https).",
+      permanentUrl: "الرابط الدائم",
+      permanentUrlDesc:
+        "هذا الرابط لن يتغير أبدا. يعيد QR التوجيه إلى الوجهة المختارة.",
+      dynamicBenefit: "غيّر الوجهة في أي وقت دون إعادة إنشاء QR.",
       chooseType: "اختر النوع",
       configure: "الاعداد",
       customize: "تخصيص",
@@ -792,6 +927,7 @@ const messages: Record<Locale, NestedMessages> = {
       status: {
         all: "الكل",
         static: "ثابت",
+        dynamic: "ديناميكي",
         favorites: "المفضلة",
       },
       type: {
@@ -847,6 +983,34 @@ const messages: Record<Locale, NestedMessages> = {
       edit: "تعديل",
       duplicate: "تكرار",
       delete: "حذف",
+      permanentUrlLabel: "الرابط الدائم",
+      permanentUrlCopied: "تم نسخ الرابط الدائم",
+      editDestination: "تعديل الوجهة",
+      destinationLabel: "رابط الوجهة",
+      destinationSaved: "تم تحديث الوجهة",
+      destinationFailed: "تعذر تحديث الوجهة",
+      disable: "تعطيل",
+      enable: "تفعيل",
+      statusActive: "نشط",
+      statusDisabled: "معطل",
+      visibilityDesc:
+        "عند تعطيل QR، يستجيب رابطه الدائم برمز 410 (Gone).",
+      pendingSync: "بانتظار المزامنة",
+      published: "منشور",
+      notPublished: "غير منشور",
+      disableDialog: {
+        title: "تعطيل هذا QR؟",
+        description:
+          "سيتوقف رابطه الدائم عن إعادة التوجيه حتى تعيد تفعيله.",
+        cancel: "إلغاء",
+        confirm: "تعطيل",
+      },
+      enableDialog: {
+        title: "تفعيل هذا QR؟",
+        description: "سيعيد رابطه الدائم التوجيه إلى الوجهة مجددا.",
+        cancel: "إلغاء",
+        confirm: "تفعيل",
+      },
       deleteDialog: {
         title: "حذف رمز QR هذا؟",
         description: "لا يمكن التراجع عن هذا الإجراء.",
@@ -899,6 +1063,21 @@ const messages: Record<Locale, NestedMessages> = {
       pwaTitle: "PWA / غير متصل",
       pwaDesc:
         "استخدم التطبيق حتى بدون اتصال بالانترنت.",
+    },
+    dynamicQr: {
+      errDestinationRequired: "رابط الوجهة مطلوب.",
+      errInvalidDestination: "أدخل رابطا صالحا (http أو https).",
+      errShortCodeCollision: "الرمز مستخدم بالفعل. حاول مجددا.",
+      errShortCodeGeneration: "تعذر إنشاء رمز فريد. حاول مجددا.",
+      syncRequired: "المزامنة مطلوبة لنشر رمز QR الديناميكي الخاص بك.",
+      qrNotFoundTitle: "رمز QR غير موجود",
+      qrNotFoundDesc: "هذا الرابط لا يطابق أي رمز QR نشط.",
+      qrDisabledTitle: "رمز QR معطل",
+      qrDisabledDesc: "تم تعطيل رمز QR هذا بواسطة منشئه.",
+      invalidDestinationTitle: "رابط وجهة غير صالح",
+      invalidDestinationDesc: "وجهة رمز QR هذا غير صالحة.",
+      temporaryErrorTitle: "خطأ مؤقت",
+      temporaryErrorDesc: "تعذرت معالجة طلبك. حاول مجددا لاحقا.",
     },
   },
 };

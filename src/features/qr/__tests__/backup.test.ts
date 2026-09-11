@@ -38,6 +38,22 @@ describe("qrRecordSchema", () => {
     expect(qrRecordSchema.safeParse(record).success).toBe(false);
   });
 
+  it("accepts a dynamic record with short code and destination", () => {
+    const record = {
+      ...makeWebsiteRecord(),
+      isDynamic: true,
+      shortCode: "Ab2cDe9F",
+      destinationUrl: "https://menu.example",
+      status: "active" as const,
+    };
+    expect(qrRecordSchema.safeParse(record).success).toBe(true);
+  });
+
+  it("rejects a dynamic record without its short code / destination", () => {
+    const record = { ...makeWebsiteRecord(), isDynamic: true };
+    expect(qrRecordSchema.safeParse(record).success).toBe(false);
+  });
+
   it("rejects invalid values for the type", () => {
     const record = { ...makeWebsiteRecord(), values: { url: "not-a-url" } };
     expect(qrRecordSchema.safeParse(record).success).toBe(false);

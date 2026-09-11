@@ -152,6 +152,7 @@ function makeLocalRecord(overrides: Partial<QRCodeRecord> = {}): QRCodeRecord {
     },
     isDynamic: false,
     favorite: false,
+    status: "active",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,

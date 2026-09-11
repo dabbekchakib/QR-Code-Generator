@@ -58,6 +58,9 @@ export function createRecord(input: {
   customization: QRCodeRecord["customization"];
   isDynamic?: boolean;
   favorite?: boolean;
+  shortCode?: string | null;
+  destinationUrl?: string | null;
+  status?: QRCodeRecord["status"];
 }): QRCodeRecord {
   const now = new Date().toISOString();
   return {
@@ -68,7 +71,24 @@ export function createRecord(input: {
     customization: input.customization,
     isDynamic: input.isDynamic ?? false,
     favorite: input.favorite ?? false,
+    shortCode: input.shortCode ?? null,
+    destinationUrl: input.destinationUrl ?? null,
+    status: input.status ?? "active",
     createdAt: now,
     updatedAt: now,
+  };
+}
+
+/**
+ * Make a value read from IndexedDB safe: records written before Phase 5 have
+ * no shortCode/destinationUrl/status fields. Normalizing on read lets the rest
+ * of the app ignore that they ever existed.
+ */
+export function normalizeRecord(record: QRCodeRecord): QRCodeRecord {
+  return {
+    ...record,
+    shortCode: record.shortCode ?? null,
+    destinationUrl: record.destinationUrl ?? null,
+    status: record.status ?? "active",
   };
 }

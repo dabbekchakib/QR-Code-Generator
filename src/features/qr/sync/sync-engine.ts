@@ -31,6 +31,9 @@ async function applyOperation(
         customization: payload.customization,
         favorite: payload.favorite,
         is_dynamic: payload.is_dynamic,
+        short_code: payload.short_code,
+        destination_url: payload.destination_url,
+        status: payload.status,
       } as never)
       .eq("id", op.recordId)
       .eq("user_id", userId)
@@ -53,6 +56,9 @@ async function applyOperation(
           customization: payload.customization,
           favorite: payload.favorite,
           is_dynamic: payload.is_dynamic,
+          short_code: payload.short_code,
+          destination_url: payload.destination_url,
+          status: payload.status,
           created_at: payload.created_at,
           updated_at: payload.updated_at,
         } as never,
