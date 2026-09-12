@@ -6,7 +6,21 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 7 (Current)
+### Phase 8 (Current)
+- **Advanced designer** — `/create` now has a full design panel: the 5 one-click presets plus live preview, module styles (square/rounded/dots), independent finder-eye styles with optional eye color, foreground/background color pickers, size, quiet-zone margin and error-correction level
+- **Center logo** — upload a PNG/JPEG/WebP/SVG (max 2 MB, never uploaded — read locally as a data URL) with size, margin and shape (square/rounded/circle) controls; drawn on a white contrast plate so it never blends into busy modules
+- **Frames & text** — None / Simple / Rounded / Badge (top plate) / Scan (bottom band), with optional caption text (≤30 chars) that auto-detects RTL scripts (Arabic/Hebrew)
+- **Transparent background** — export a PNG/SVG with no background rect (frame plates are dropped too) so the code composites cleanly on any surface
+- **Readability guardrails** — live contrast check (≥4.5 good / ≥3 warning / <3 danger) plus warnings for small quiet zones, oversized logos (>25%), logos without correction H, transparent backgrounds, and decorative styles; overall quality is the worst severity present and nothing is silently changed
+- **Real exports** — PNG is rasterized from the same draw-command list as the on-screen preview; SVG is a true vector (`buildQRSVG`) sharing identical geometry, so preview == PNG == SVG. Filenames are sanitized from the QR name (`qr-manager-<name>.png/.svg`)
+- **Share** — native share sheet for the rendered PNG, falling back to text share and then clipboard
+- **Design defaults** — `/settings` gains a "QR Design Defaults" card that stores the default style locally (logo excluded) and applies it to new codes
+- **Backward compatible** — every new field is optional on `QRCustomization` and normalized at runtime (`normalizeCustomization`); legacy records, backups and cloud rows keep working and the JSONB `customization` column needs no migration
+- **No engine duplication** — `qrcode` stays the single matrix source; the designer is a pure visualization layer (matrix/geometry → shared draw commands → SVG + canvas)
+- **i18n** — all designer strings localized in FR, EN, AR
+- **Unit tests** — readability/contrast, SVG output (frames, logo, transparency, RTL, eye colors), customization normalization and legacy round-trips, download filename sanitization, and preset design resolution. Suite total: 253 tests, all green
+
+### Phase 7
 - **Templates system** — 10 ready-made templates (Website, QR Menu, WhatsApp, Business Card, Contact, WiFi, Location, Event, Social Profile, Google Review) on `/templates`, with a gallery: live search, category chips, Recently Used, and local Favorites (indexed per device)
 - **Design presets** — 5 one-click QR styles (Classic, Midnight, Minimal, Soft, Bold) in the customizer, with a live contrast check that warns when the foreground/background pair falls below 3:1
 - **Template-driven creation** — `/create?template=<id>` prefills the wizard with the template's fields and its customization preset; dynamic templates (QR Menu, Google Review) pre-enable Dynamic mode with a permanent destination URL. Unknown template ids fall back to the normal create screen; `edit` mode always wins over the template param
@@ -97,7 +111,7 @@ Create, customize and manage QR Codes from one simple, free application.
 - TypeScript strict mode
 
 ### Upcoming Phases
-- QR Code logos & advanced styles (Rounded, Dots)
+- To be defined
 
 ## Tech Stack
 
@@ -263,7 +277,7 @@ npm test
 
 ### Creating a QR Code
 
-Navigate to `/create`, pick a type, fill in the fields — the QR code updates live. Customize colors, size, and error correction, then download PNG or SVG. You can also deep-link to a specific type: `/create?type=whatsapp`.
+Navigate to `/create`, pick a type, fill in the fields — the QR code updates live. Open the design panel to pick a preset or fine-tune module/eye styles, colors, a center logo, a frame with caption, transparency, size and error correction, watching the live readability warnings. Then download PNG or SVG. You can also deep-link to a specific type: `/create?type=whatsapp`.
 
 Click **Save QR** to name and store it locally, or open an existing code for editing via `/create?edit=<id>`.
 

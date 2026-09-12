@@ -14,7 +14,8 @@ import { qrService } from "@/features/qr/service/qr-service";
 import { useAuth } from "@/lib/auth/use-auth";
 import { useToast } from "@/lib/toast-store";
 import { ProfileForm } from "./profile-form";
-import { Moon, Sun, Monitor, Globe, QrCode, Palette, Download, Upload, Trash2, HardDrive, User, Key, ShieldCheck } from "lucide-react";
+import { DesignDefaultsForm } from "./design-defaults";
+import { Moon, Sun, Monitor, Globe, QrCode, Palette, Download, Upload, Trash2, HardDrive, User, Key, ShieldCheck, Brush } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -195,6 +196,22 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* QR Design Defaults */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Brush className="size-4 text-muted-foreground" />
+            {t("settings.designDefaults.title")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {t("settings.designDefaults.description")}
+          </p>
+          <DesignDefaultsForm />
         </CardContent>
       </Card>
 

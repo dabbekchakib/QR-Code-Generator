@@ -43,9 +43,9 @@ export function QRCard({ record, onToggleFavorite, onDuplicate, onDelete }: QRCa
     setDownloading(format);
     try {
       if (format === "png") {
-        await downloadPNG(content, record.type, record.customization);
+        await downloadPNG(content, record.type, record.customization, record.name);
       } else {
-        await downloadSVG(content, record.type, record.customization);
+        await downloadSVG(content, record.type, record.customization, record.name);
       }
     } finally {
       setDownloading(null);

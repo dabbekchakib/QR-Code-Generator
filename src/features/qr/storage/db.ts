@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { QRCodeRecord } from "./types";
 import type { SyncOperation } from "../sync/types";
+import { normalizeCustomization } from "../types";
 
 export const DB_NAME = "qr-manager";
 export const DB_STORE = "qr-codes";
@@ -94,5 +95,6 @@ export function normalizeRecord(record: QRCodeRecord): QRCodeRecord {
     destinationUrl: record.destinationUrl ?? null,
     status: record.status ?? "active",
     templateId: record.templateId ?? null,
+    customization: normalizeCustomization(record.customization),
   };
 }

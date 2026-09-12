@@ -8,6 +8,7 @@ import {
   vcardSchema,
   textSchema,
 } from "../schemas";
+import { normalizeCustomization } from "../types";
 import type { QRCodeRecord } from "./types";
 
 export const customizationSchema = z.object({
@@ -17,6 +18,21 @@ export const customizationSchema = z.object({
   background: z.string().min(1),
   errorCorrection: z.enum(["L", "M", "Q", "H"]),
   style: z.enum(["square", "rounded", "dots"]),
+  eyeStyle: z.enum(["square", "rounded", "dots"]).optional(),
+  eyeColor: z.string().min(1).nullable().optional(),
+  frame: z.enum(["none", "simple", "rounded", "badge", "scan"]).optional(),
+  frameText: z.string().max(30).optional(),
+  logo: z
+    .object({
+      dataUrl: z.string().min(1),
+      size: z.number().min(1).max(45),
+      margin: z.number().min(0).max(64),
+      shape: z.enum(["square", "rounded", "circle"]),
+    })
+    .nullable()
+    .optional(),
+  transparentBackground: z.boolean().optional(),
+  preset: z.string().min(1).nullable().optional(),
 });
 
 const recordBase = z.object({
@@ -77,7 +93,8 @@ export const qrRecordSchema = z
 
 /**
  * Normalize a parsed backup record back to a full QRCodeRecord, filling the
- * Phase 5 defaults for fields that older backup files do not contain.
+ * Phase 5 defaults for fields that older backup files do not contain and the
+ * Phase 8 design defaults for older customizations.
  */
 export function recordFromBackup(record: QRRecordInput): QRCodeRecord {
   return {
@@ -86,6 +103,7 @@ export function recordFromBackup(record: QRRecordInput): QRCodeRecord {
     destinationUrl: record.destinationUrl ?? null,
     status: record.status ?? "active",
     templateId: record.templateId ?? null,
+    customization: normalizeCustomization(record.customization),
   };
 }
 

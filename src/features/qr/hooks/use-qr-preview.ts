@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { renderQRToDataURL } from "../lib/qr-renderer";
 import { generateQRContent } from "../lib/qr-generator";
 import { getDynamicQRUrlWithFallback } from "../dynamic";
+import { normalizeCustomization } from "../types";
 import type { QRCodeRecord } from "../storage";
 import type { QRType } from "@/types";
 import { useI18n } from "@/i18n/provider";
@@ -34,14 +35,21 @@ function previewToken(
   customization: QRCodeRecord["customization"] | null
 ): string {
   if (!content || !customization) return "";
+  const c = normalizeCustomization(customization);
   return [
     content,
-    customization.size,
-    customization.margin,
-    customization.foreground,
-    customization.background,
-    customization.errorCorrection,
-    customization.style,
+    c.size,
+    c.margin,
+    c.foreground,
+    c.background,
+    c.errorCorrection,
+    c.style,
+    c.eyeStyle,
+    c.eyeColor ?? "",
+    c.frame,
+    c.frameText,
+    c.logo ? `${c.logo.size}:${c.logo.margin}:${c.logo.shape}:${c.logo.dataUrl.length}` : "",
+    c.transparentBackground ? "1" : "0",
   ].join("|");
 }
 

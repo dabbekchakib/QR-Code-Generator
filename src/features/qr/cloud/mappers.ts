@@ -2,6 +2,7 @@ import type { CreateQRCodeRecord, QRCodeRecord } from "../storage/types";
 import type { CloudQRRowParsed } from "./schemas";
 import { validateCloudRow } from "./schemas";
 import type { CloudProfileRow, CloudQRRow } from "./types";
+import { normalizeCustomization } from "../types";
 
 export function generateId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -30,7 +31,7 @@ export function cloudRowToLocalRecord(row: CloudQRRow): QRCodeRecord {
     name: row.name,
     type: row.type,
     values: row.values,
-    customization: row.customization,
+    customization: normalizeCustomization(row.customization),
     isDynamic: row.is_dynamic,
     favorite: row.favorite,
     shortCode: row.short_code ?? null,

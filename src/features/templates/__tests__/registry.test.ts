@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getTemplateById, templateRegistry, TEMPLATE_CATEGORIES } from "../registry";
 import { POPULAR_TEMPLATE_IDS, QUICK_CREATE_TEMPLATE_IDS } from "../data";
-import { QR_DESIGN_PRESETS, getPresetById, presetCustomization } from "../presets";
+import { QR_DESIGN_PRESETS, getPresetById, presetCustomization, presetDesign } from "../presets";
 import { validateQRContrast } from "../utils/contrast";
 import { DEFAULT_CUSTOMIZATION } from "@/features/qr/types";
 
@@ -136,5 +136,19 @@ describe("design presets", () => {
     expect(presetCustomization(getPresetById("classic"), DEFAULT_CUSTOMIZATION)).toEqual(
       DEFAULT_CUSTOMIZATION
     );
+  });
+
+  it("every preset declares a design and presetDesign resolves it fully", () => {
+    for (const preset of QR_DESIGN_PRESETS) {
+      expect(["square", "rounded", "dots"]).toContain(preset.eyeStyle);
+      const design = presetDesign(preset);
+      expect(design.eyeStyle).toBe(preset.eyeStyle);
+      expect(design.frame).toBe(preset.frame ?? "none");
+      expect(design.frameText).toBe(preset.frameText ?? "");
+      expect(design.preset).toBe(preset.id);
+      expect(design.size).toBe(512);
+      expect(design.margin).toBe(4);
+      expect(design.style).toBe(preset.style);
+    }
   });
 });

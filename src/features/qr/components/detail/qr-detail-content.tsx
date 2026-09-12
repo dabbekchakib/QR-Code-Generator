@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ImageIcon, FileCode, Copy, Check, Pencil, CopyPlus, Trash2, Star, Share2, Shield, Link2, Power, CloudOff } from "lucide-react";
+import { ArrowLeft, ImageIcon, FileCode, Copy, Check, Pencil, CopyPlus, Trash2, Star, Share2, Shield, Link2, Power, CloudOff, Palette } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { qrService } from "@/features/qr/service/qr-service";
 import type { QRCodeRecord, QRStatus } from "@/features/qr/storage";
 import { useQRContent, useQRPreviewDataUrl, useQRTypeName } from "@/features/qr/hooks/use-qr-preview";
 import { downloadPNG, downloadSVG } from "@/features/qr/lib/qr-download";
+import { shareQRCode } from "@/features/qr/lib/qr-share";
 import { copyToClipboard } from "@/features/qr/lib/qr-clipboard";
 import { getCopyLabel } from "@/features/qr/lib/qr-generator";
 import { duplicateRecord } from "@/features/qr/storage/utils";
@@ -119,9 +120,9 @@ export function QRDetailContent() {
     setDownloading(format);
     try {
       if (format === "png") {
-        await downloadPNG(content, record.type, record.customization);
+        await downloadPNG(content, record.type, record.customization, record.name);
       } else {
-        await downloadSVG(content, record.type, record.customization);
+        await downloadSVG(content, record.type, record.customization, record.name);
       }
     } finally {
       setDownloading(null);
@@ -129,20 +130,11 @@ export function QRDetailContent() {
   };
 
   const handleShare = async () => {
-    const text = `${record.name}: ${content}`;
-    if (typeof navigator !== "undefined" && navigator.share) {
-      try {
-        await navigator.share({ title: record.name, text });
-      } catch {
-        // user cancelled
-      }
-      return;
-    }
-    const ok = await copyToClipboard(text);
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    await shareQRCode({
+      content,
+      name: record.name,
+      customization: record.customization,
+    });
   };
 
   const handleToggleFavorite = async () => {
@@ -293,7 +285,11 @@ export function QRDetailContent() {
         <CardContent className="p-8 flex items-center justify-center">
           <div
             className="rounded-2xl p-6 shadow-sm"
-            style={{ backgroundColor: record.customization.background }}
+            style={{
+              backgroundColor: record.customization.transparentBackground
+                ? "transparent"
+                : record.customization.background,
+            }}
           >
             {preview ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -400,6 +396,10 @@ export function QRDetailContent() {
         <Button variant="outline" size="sm" render={<Link href={`/create?edit=${record.id}`} />} nativeButton={false}>
           <Pencil className="size-4" />
           {t("detail.edit")}
+        </Button>
+        <Button variant="outline" size="sm" render={<Link href={`/create?edit=${record.id}`} />} nativeButton={false}>
+          <Palette className="size-4" />
+          {t("detail.customize")}
         </Button>
         <Button variant="outline" size="sm" onClick={handleDuplicate} nativeButton={false}>
           <CopyPlus className="size-4" />

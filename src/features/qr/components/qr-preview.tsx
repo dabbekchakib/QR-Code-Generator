@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { renderQRToCanvas } from "../lib/qr-renderer";
+import { useI18n } from "@/i18n/provider";
 import type { QRCustomization } from "../types";
 
 interface QRPreviewProps {
@@ -10,6 +11,7 @@ interface QRPreviewProps {
 }
 
 export function QRPreview({ content, customization }: QRPreviewProps) {
+  const { t } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -29,17 +31,21 @@ export function QRPreview({ content, customization }: QRPreviewProps) {
     return (
       <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 p-8">
         <p className="text-sm text-muted-foreground text-center">
-          Fill in the form to see your QR code
+          {t("create.previewEmpty")}
         </p>
       </div>
     );
   }
 
+  const transparent = !!customization.transparentBackground;
+
   return (
     <div className="flex flex-col items-center gap-4">
       <div
         className="rounded-xl p-4 shadow-sm"
-        style={{ backgroundColor: customization.background }}
+        style={{
+          backgroundColor: transparent ? "transparent" : customization.background,
+        }}
       >
         <canvas
           ref={canvasRef}
@@ -50,7 +56,7 @@ export function QRPreview({ content, customization }: QRPreviewProps) {
         />
       </div>
       <p className="text-xs text-muted-foreground text-center">
-        Generated locally in your browser
+        {t("create.previewLocalNote")}
       </p>
     </div>
   );

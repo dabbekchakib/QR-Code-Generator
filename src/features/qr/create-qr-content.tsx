@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { qrTypes } from "./qr-types-config";
 import { QRForm } from "./components/qr-form";
 import { QRPreview } from "./components/qr-preview";
-import { QRCustomizer } from "./components/qr-customizer";
+import { QRDesigner } from "./components/design/qr-designer";
 import { QRDownloadButtons } from "./components/qr-download-buttons";
 import { QRContentActions } from "./components/qr-content-actions";
 import { generateQRContent } from "./lib/qr-generator";
@@ -20,6 +20,7 @@ import {
   DEFAULT_CUSTOMIZATION,
   getDefaultValues,
 } from "./types";
+import { getDesignDefaults } from "./hooks/use-design-defaults";
 import { urlSchema, wifiSchema, phoneSchema, emailSchema, whatsappSchema, vcardSchema, textSchema } from "./schemas";
 import { cn } from "@/lib/utils";
 import { RotateCcw, Settings2, QrCode, Shield, Save, Lock, Globe, LayoutTemplate } from "lucide-react";
@@ -96,7 +97,9 @@ export function CreateQRContent() {
     selectedType ? getDefaultValues(selectedType) : getDefaultValues("website")
   );
   const [templateValues, setTemplateValues] = useState<TemplateValues>({});
-  const [customization, setCustomization] = useState<QRCustomization>(DEFAULT_CUSTOMIZATION);
+  const [customization, setCustomization] = useState<QRCustomization>(() =>
+    getDesignDefaults()
+  );
 
   const [editedRecord, setEditedRecord] = useState<QRCodeRecord | null>(null);
   const loadedRef = useRef(false);
@@ -118,14 +121,14 @@ export function CreateQRContent() {
     setDestinationError(null);
     if (mode === "dynamic") {
       setSelectedType("website");
-      setCustomization(DEFAULT_CUSTOMIZATION);
+      setCustomization(getDesignDefaults());
     }
   }, [activeTemplate]);
 
   const handleTypeSelect = useCallback((type: QRType) => {
     setSelectedType(type);
     setValues(getDefaultValues(type));
-    setCustomization(DEFAULT_CUSTOMIZATION);
+    setCustomization(getDesignDefaults());
   }, []);
 
   const handleValuesChange = useCallback((newValues: AnyFormValues) => {
@@ -200,7 +203,7 @@ export function CreateQRContent() {
     } else if (selectedType) {
       setValues(getDefaultValues(selectedType));
     }
-    setCustomization(templateInitialCustomization ?? DEFAULT_CUSTOMIZATION);
+    setCustomization(templateInitialCustomization ?? getDesignDefaults());
   }, [activeTemplate, templateInitialCustomization, isDynamicMode, selectedType]);
 
   useEffect(() => {
@@ -603,7 +606,7 @@ export function CreateQRContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <QRCustomizer customization={customization} onChange={setCustomization} />
+                <QRDesigner customization={customization} onChange={setCustomization} />
               </CardContent>
             </Card>
           </div>
@@ -628,7 +631,11 @@ export function CreateQRContent() {
                       <QRDownloadButtons content={qrContent} type={selectedType ?? activeTemplate?.qrType ?? "website"} customization={customization} />
 
                       <div className="flex flex-wrap items-center gap-2">
-                        <QRContentActions type={selectedType ?? activeTemplate?.qrType ?? "website"} content={qrContent} />
+                        <QRContentActions
+                          type={selectedType ?? activeTemplate?.qrType ?? "website"}
+                          content={qrContent}
+                          customization={customization}
+                        />
                         <Button variant="ghost" size="sm" onClick={handleReset} aria-label={t("create.resetForm")}>
                           <RotateCcw className="size-4" />
                           {t("create.resetForm")}

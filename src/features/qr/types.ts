@@ -65,6 +65,19 @@ export type QRFormValues =
 export type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 export type QRStyle = "square" | "rounded" | "dots";
 
+/** Decorative frame around the QR code. */
+export type QRFrameType = "none" | "simple" | "rounded" | "badge" | "scan";
+
+/** Center logo: a local image (never uploaded) drawn over the matrix. */
+export interface QRDesignLogo {
+  dataUrl: string;
+  /** Logo width as a percentage of the QR width (default 15, warn above ~25). */
+  size: number;
+  /** White padding (px) around the logo inside its plate. */
+  margin: number;
+  shape: "square" | "rounded" | "circle";
+}
+
 export interface QRCustomization {
   size: number;
   margin: number;
@@ -72,16 +85,64 @@ export interface QRCustomization {
   background: string;
   errorCorrection: ErrorCorrectionLevel;
   style: QRStyle;
+  /** Phase 8 designer fields. Optional so records created before Phase 8 keep
+   *  validating and rendering — `normalizeCustomization` fills safe defaults
+   *  wherever the app actually reads them. */
+  eyeStyle?: QRStyle;
+  eyeColor?: string | null;
+  frame?: QRFrameType;
+  frameText?: string;
+  logo?: QRDesignLogo | null;
+  transparentBackground?: boolean;
+  preset?: string | null;
 }
 
-export const DEFAULT_CUSTOMIZATION: QRCustomization = {
+/** A QRCustomization where every Phase 8 field is guaranteed to exist. */
+export type ResolvedCustomization = QRCustomization & {
+  eyeStyle: QRStyle;
+  eyeColor: string | null;
+  frame: QRFrameType;
+  frameText: string;
+  logo: QRDesignLogo | null;
+  transparentBackground: boolean;
+  preset: string | null;
+};
+
+export const DEFAULT_CUSTOMIZATION: ResolvedCustomization = {
   size: 512,
   margin: 4,
   foreground: "#000000",
   background: "#FFFFFF",
   errorCorrection: "M",
   style: "square",
+  eyeStyle: "square",
+  eyeColor: null,
+  frame: "none",
+  frameText: "",
+  logo: null,
+  transparentBackground: false,
+  preset: "classic",
 };
+
+/**
+ * Fill every Phase 8 field with a safe default. Applies to records written
+ * before Phase 8 (and to any partially-edited customization) so the rest of
+ * the app can read the fields without guards.
+ */
+export function normalizeCustomization(
+  customization: QRCustomization
+): ResolvedCustomization {
+  return {
+    ...customization,
+    eyeStyle: customization.eyeStyle ?? "square",
+    eyeColor: customization.eyeColor ?? null,
+    frame: customization.frame ?? "none",
+    frameText: customization.frameText ?? "",
+    logo: customization.logo ?? null,
+    transparentBackground: customization.transparentBackground ?? false,
+    preset: customization.preset ?? null,
+  };
+}
 
 export const SIZE_OPTIONS = [256, 512, 768, 1024] as const;
 
