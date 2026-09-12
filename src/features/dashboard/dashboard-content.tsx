@@ -150,6 +150,7 @@ export function DashboardContent() {
       icon: ScanLine,
       color: "text-emerald-500",
       bgColor: "bg-emerald-500/10",
+      href: "/analytics",
     },
     {
       title: t("dashboard.scansToday"),
@@ -158,6 +159,7 @@ export function DashboardContent() {
       icon: CalendarDays,
       color: "text-amber-500",
       bgColor: "bg-amber-500/10",
+      href: "/analytics?range=today",
     },
   ];
 
@@ -174,28 +176,45 @@ export function DashboardContent() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">
-                    {stat.value}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {stat.valueLabel}
-                  </p>
+        {statCards.map((stat) => {
+          const card = (
+            <Card
+              className={stat.href ? "h-full transition-colors group-hover:border-primary/40" : undefined}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="text-2xl font-bold text-foreground mt-1 tabular-nums">
+                      {stat.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {stat.valueLabel}
+                    </p>
+                  </div>
+                  <div
+                    className={`size-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}
+                  >
+                    <stat.icon className={`size-6 ${stat.color}`} />
+                  </div>
                 </div>
-                <div
-                  className={`size-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}
-                >
-                  <stat.icon className={`size-6 ${stat.color}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+
+          return stat.href ? (
+            <Link
+              key={stat.title}
+              href={stat.href}
+              className="group block"
+              aria-label={`${stat.title}: ${stat.value}`}
+            >
+              {card}
+            </Link>
+          ) : (
+            <div key={stat.title}>{card}</div>
+          );
+        })}
       </div>
 
       {/* Quick create from a template */}

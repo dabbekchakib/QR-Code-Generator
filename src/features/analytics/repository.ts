@@ -1,8 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { QRType } from "@/types";
 import type {
   AnalyticsPayload,
   BreakdownItem,
+  ComparisonRow,
   DynamicQRItem,
+  ExportResult,
+  ExportRow,
+  PerformanceRow,
   ScanMetadata,
   TimeseriesPoint,
   TopQRItem,
@@ -131,4 +136,102 @@ export async function fetchDynamicQRs(client: SupabaseClient): Promise<DynamicQR
     id: String(item.id ?? ""),
     name: String(item.name ?? "Unknown"),
   }));
+}
+
+/** Per-Dynamic-QR performance row (Dynamic QR codes only). */
+export async function fetchQRPerformance(
+  client: SupabaseClient,
+  options: AnalyticsQueryOptions
+): Promise<PerformanceRow[]> {
+  const { data, error } = await client.rpc("get_qr_performance", {
+    p_qr_id: options.qrId ?? null,
+    p_start: options.start?.toISOString() ?? null,
+    p_end: options.end?.toISOString() ?? null,
+    p_offset_minutes: options.offsetMinutes || 0,
+  });
+  if (error) throw new Error(error.message);
+  return rows<{
+    id?: unknown;
+    name?: unknown;
+    type?: unknown;
+    total?: unknown;
+    today?: unknown;
+    last7?: unknown;
+    last30?: unknown;
+    lastScannedAt?: unknown;
+  }>(data as unknown).map((item) => ({
+    id: String(item.id ?? ""),
+    name: String(item.name ?? "Unknown"),
+    type: toQRType(item.type),
+    total: toCount(item.total),
+    today: toCount(item.today),
+    last7: toCount(item.last7),
+    last30: toCount(item.last30),
+    lastScannedAt: item.lastScannedAt ? String(item.lastScannedAt) : null,
+  }));
+}
+
+function toQRType(value: unknown): QRType {
+  const raw = String(value ?? "text");
+  const allowed: QRType[] = ["website", "wifi", "phone", "email", "whatsapp", "vcard", "text"];
+  return (allowed as string[]).includes(raw) ? (raw as QRType) : "text";
+}
+
+/** 2..5 Dynamic QR comparison over one shared window. */
+export async function fetchQRComparison(
+  client: SupabaseClient,
+  options: AnalyticsQueryOptions & { qrIds: string[] }
+): Promise<ComparisonRow[]> {
+  const { data, error } = await client.rpc("get_qr_comparison", {
+    p_qr_ids: options.qrIds,
+    p_start: options.start?.toISOString() ?? null,
+    p_end: options.end?.toISOString() ?? null,
+    p_offset_minutes: options.offsetMinutes || 0,
+  });
+  if (error) throw new Error(error.message);
+  return rows<{
+    id?: unknown;
+    name?: unknown;
+    type?: unknown;
+    total?: unknown;
+    lastScannedAt?: unknown;
+    timeseries?: unknown;
+  }>(data as unknown).map((item) => ({
+    id: String(item.id ?? ""),
+    name: String(item.name ?? "Unknown"),
+    type: toQRType(item.type),
+    total: toCount(item.total),
+    lastScannedAt: item.lastScannedAt ? String(item.lastScannedAt) : null,
+    timeseries: timeseries(item.timeseries),
+  }));
+}
+
+/** Raw audit rows for CSV / JSON export, respecting the active filters. */
+export async function fetchScansExport(
+  client: SupabaseClient,
+  options: AnalyticsQueryOptions
+): Promise<ExportResult> {
+  const { data, error } = await client.rpc("get_qr_scans_export", {
+    p_qr_id: options.qrId ?? null,
+    p_start: options.start?.toISOString() ?? null,
+    p_end: options.end?.toISOString() ?? null,
+    p_offset_minutes: options.offsetMinutes || 0,
+  });
+  if (error) throw new Error(error.message);
+  const payload = (data as unknown) as { total?: unknown; rows?: unknown };
+  return {
+    total: toCount(payload.total),
+    rows: rows<Partial<ExportRow>>(payload.rows).map((item) => coerceExportRow(item)),
+  };
+}
+
+function coerceExportRow(item: Partial<ExportRow>): ExportRow {
+  return {
+    qrName: String(item.qrName ?? ""),
+    qrType: String(item.qrType ?? ""),
+    scannedAt: String(item.scannedAt ?? ""),
+    device: String(item.device ?? "Unknown"),
+    operatingSystem: String(item.operatingSystem ?? "Unknown"),
+    browser: String(item.browser ?? "Unknown"),
+  };
 }

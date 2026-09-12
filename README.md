@@ -6,7 +6,21 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 9 (Current)
+### Phase 10 (Current)
+- **Advanced analytics & reports** — `/analytics` is now a full reporting dashboard built exclusively on real `qr_scans` data: **5 KPI cards** (Total / Today / This Week / This Month / **Avg per day**), a dependency-free SVG **Scans over time** chart, **Top QR Codes** (with View all), device/OS/browser breakdowns, **QR performance table**, **QR comparison**, and CSV/JSON/report **exports**
+- **URL-driven filters** — the URL is the source of truth (`/analytics?range=…&qr=…[&from=&to=]`); period (Today / 7 / 30 / 90 days / All time / **Custom range**) and QR filters, with a **custom from/to range** validated as local calendar dates (≤ 365 days, end never in the future). Every URL value is re-validated on load; anything invalid falls back to a safe default
+- **Smarter granularity** — trend buckets adapt to the selected window: hourly ≤ 48 h, **daily ≤ ~200 days**, weekly ≤ ~800 days, monthly otherwise. "Last 30 days" is now bucketed per day
+- **QR performance table** — one row per Dynamic QR: Total / Today / Last 7 days / Last 30 days and **Last scan** ("just now", "x minutes ago"…) in the selected window, static codes intentionally absent (rendered "—", never a misleading 0)
+- **QR comparison** — select 2–5 Dynamic QR codes (ownership validated server-side; foreign/deleted ids are rejected) to see per-QR totals, share of total, last scan and a mini bar chart over the identical window
+- **Exports** — CSV (UTF-8 BOM, RFC 4180 quoting, localized headers), JSON (self-describing envelope: `generatedAt`, `filters`, `data`) and a plain-text **report** built from already-fetched secured data. Only privacy-safe columns are exposed (QR name, type, local scan time, device, OS, browser); the row count is server-capped (1–50 000)
+- **Live data guarantees** — refresh button + "Updated at …" indicator, "—" for an empty window average, "Never scanned" labels, and no placeholder figures anywhere
+- **Server-side SQL (migration 06)** — new `SECURITY DEFINER` functions `get_qr_performance()`, `get_qr_comparison()`, `get_qr_scans_export()` and a regenerated `get_qr_analytics()`; every function scopes all reads to `auth.uid()` with per-QR ownership guards, and `execute` is revoked from `anon` / granted to `authenticated`
+- **Detail + dashboard integration** — the QR detail analytics card now shows Total / Today / Last 7 / Last 30 / Last scan, and the dashboard **Total Scans** and **Scans Today** tiles link into `/analytics`
+- **States & a11y** — loading skeletons, error + retry, offline and sign-in prompts, empty states with a "Share a QR Code" CTA, a privacy-notice card, screen-reader textual chart summaries, and RTL-safe layout
+- **i18n** — new analytics keys (filters, custom range, relative time, performance table, comparison, exports, reports) in FR, EN, AR
+- **Unit tests** — 42 new tests: URL-selection parsing and fallbacks, custom-range validation, day counts, range windows, avg-per-day and percentage safety, relative-time formatting, CSV escaping/BOM, export validation, envelope and report builders. Suite total: 326 tests, all green
+
+### Phase 9
 - **Central sharing service** — new `src/features/sharing/` feature hosts the qr share/copy/download logic that the create, detail, library and dashboard screens all reuse (single implementation, no duplicated handlers)
 - **Web Share API with reliable fallback** — a share button uses the native system share sheet (sharing the rendered PNG file when customization is active, falling back to text). When the native sheet is unavailable the button opens the **Share dialog** instead, so there is never a dead end: copy the permanent URL / content or download from there. `shareQRCode()` itself ends in clipboard as a last resort
 - **Copy again, safely** — `copyToClipboard()` returns a structured `{ success, error? }` result (Clipboard API with an `execCommand` legacy fallback), and "Copy content" reuses the Phase 2 generator so the copied text always matches what the QR encodes

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatCount, percent, toCount } from "../utils/format";
+import { formatCount, percent, toCount, calculatePercentage, averagePerDay } from "../utils/format";
 
 describe("percent", () => {
   it("returns 0 for a zero or missing total (never NaN/Infinity)", () => {
@@ -33,6 +33,30 @@ describe("formatCount", () => {
     expect(formatCount(undefined)).toBe("0");
     expect(formatCount(Number.NaN)).toBe("0");
     expect(formatCount(Number.POSITIVE_INFINITY)).toBe("0");
+  });
+});
+
+describe("calculatePercentage", () => {
+  it("is a strict alias of percent (never NaN for a 0 total)", () => {
+    expect(calculatePercentage(100, 100)).toBe(100);
+    expect(calculatePercentage(1, 3)).toBe(33.3);
+    expect(calculatePercentage(0, 0)).toBe(0);
+    expect(Number.isNaN(calculatePercentage(4, 0))).toBe(false);
+  });
+});
+
+describe("averagePerDay", () => {
+  it("computes total / days with 1 decimal", () => {
+    expect(averagePerDay(150, 30)).toBe(5);
+    expect(averagePerDay(13, 7)).toBe(1.9);
+    expect(averagePerDay(5, 2)).toBe(2.5);
+  });
+
+  it("returns null when not computable (empty window or missing inputs)", () => {
+    expect(averagePerDay(0, 30)).toBeNull();
+    expect(averagePerDay(null, 30)).toBeNull();
+    expect(averagePerDay(30, null)).toBeNull();
+    expect(averagePerDay(30, 0)).toBeNull();
   });
 });
 

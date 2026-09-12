@@ -15,6 +15,21 @@ export function percent(part: number, total: number): number {
   return Object.is(rounded, -0) ? 0 : rounded;
 }
 
+/** Centralized percentage helper: total 0 (or non-finite) always yields 0. */
+export const calculatePercentage = percent;
+
+/** Total / number of days (real data only). null when not computable. */
+export function averagePerDay(
+  total: number | null | undefined,
+  days: number | null | undefined
+): number | null {
+  const t = typeof total === "number" ? total : Number(total ?? Number.NaN);
+  const d = typeof days === "number" ? days : Number(days ?? Number.NaN);
+  if (!Number.isFinite(t) || !Number.isFinite(d) || d <= 0) return null;
+  if (t === 0) return null; // no scan data in window -> "—", never a fake figure
+  return Math.round((t / d) * 10) / 10;
+}
+
 /** Safe integer coercion used when mapping raw RPC rows. */
 export function toCount(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value);
