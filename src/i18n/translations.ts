@@ -24,6 +24,12 @@ const messages: Record<Locale, NestedMessages> = {
       online: "En ligne",
       new: "Nouveau",
     },
+    errors: {
+      genericTitle: "Une erreur est survenue",
+      genericDesc:
+        "Quelque chose s'est mal passé. Rechargez la page pour continuer.",
+      tryAgain: "Réessayer",
+    },
     auth: {
       loginTitle: "Bon retour",
       loginSubtitle: "Connectez-vous pour synchroniser vos QR Codes",
@@ -89,6 +95,17 @@ const messages: Record<Locale, NestedMessages> = {
       firstSyncKeep: "Garder local",
       firstSyncCancel: "Annuler",
       pushProgress: "Synchronisation {current}/{total}...",
+      storageUnavailable: "Le stockage local est temporairement indisponible.",
+    },
+    pwa: {
+      newVersionAvailable: "Une nouvelle version est disponible.",
+      refreshToUpdate: "Actualiser",
+    },
+    offline: {
+      title: "Vous êtes hors ligne",
+      desc: "Reconnectez-vous pour continuer. Vos QR Codes restent disponibles sur cet appareil.",
+      retry: "Réessayer",
+      reconnecting: "Connexion rétablie...",
     },
     profile: {
       title: "Profil",
@@ -248,6 +265,7 @@ const messages: Record<Locale, NestedMessages> = {
       exportReport: "Rapport",
       exportNoData: "Aucun scan à exporter pour ce filtre.",
       exportCount: "{count} lignes prêtes à exporter.",
+      exportLoad: "Charger les données de scans",
       exportToast: "Téléchargement lancé",
       reportTitle: "QR Manager — Rapport des scans",
       reportGenerated: "Généré le",
@@ -323,6 +341,7 @@ const messages: Record<Locale, NestedMessages> = {
       title: "Mes QR Codes",
       subtitle: "Vos QR Codes sont stockés localement sur cet appareil.",
       searchPlaceholder: "Rechercher vos QR Codes...",
+      more: "Plus d'actions",
       status: {
         all: "Tout",
         static: "Statiques",
@@ -693,6 +712,7 @@ const messages: Record<Locale, NestedMessages> = {
       shapeCircle: "Cercle",
       logoErrorType: "Format non pris en charge (PNG, JPEG, WebP ou SVG attendus).",
       logoErrorSize: "Le fichier dépasse 2 Mo.",
+      logoErrorContent: "Ce fichier SVG contient du contenu actif et est refusé.",
       logoDecodeFailed: "Impossible de lire cette image.",
       transparent: "Arrière-plan transparent",
       transparentHint:
@@ -731,6 +751,11 @@ const messages: Record<Locale, NestedMessages> = {
       offline: "Offline",
       online: "Online",
       new: "New",
+    },
+    errors: {
+      genericTitle: "Something went wrong",
+      genericDesc: "An unexpected error occurred. Reload the page to continue.",
+      tryAgain: "Try again",
     },
     auth: {
       loginTitle: "Welcome back",
@@ -796,6 +821,17 @@ const messages: Record<Locale, NestedMessages> = {
       firstSyncKeep: "Keep local",
       firstSyncCancel: "Cancel",
       pushProgress: "Syncing {current}/{total}...",
+      storageUnavailable: "Local storage is temporarily unavailable.",
+    },
+    pwa: {
+      newVersionAvailable: "A new version is available.",
+      refreshToUpdate: "Refresh to update",
+    },
+    offline: {
+      title: "You are offline",
+      desc: "Reconnect to continue. Your QR Codes remain available on this device.",
+      retry: "Retry",
+      reconnecting: "Connection restored...",
     },
     profile: {
       title: "Profile",
@@ -952,6 +988,7 @@ const messages: Record<Locale, NestedMessages> = {
       exportReport: "Report",
       exportNoData: "No scans to export for this filter.",
       exportCount: "{count} rows ready to export.",
+      exportLoad: "Load scan data",
       exportToast: "Download started",
       reportTitle: "QR Manager — Scans report",
       reportGenerated: "Generated",
@@ -1028,6 +1065,7 @@ const messages: Record<Locale, NestedMessages> = {
       title: "My QR Codes",
       subtitle: "Your QR Codes are stored locally on this device.",
       searchPlaceholder: "Search QR Codes...",
+      more: "More actions",
       status: {
         all: "All",
         static: "Static",
@@ -1393,6 +1431,7 @@ const messages: Record<Locale, NestedMessages> = {
       shapeCircle: "Circle",
       logoErrorType: "Unsupported format (PNG, JPEG, WebP or SVG).",
       logoErrorSize: "File exceeds 2 MB.",
+      logoErrorContent: "This SVG file contains active content and was rejected.",
       logoDecodeFailed: "This image could not be read.",
       transparent: "Transparent background",
       transparentHint: "No background color is printed (PNG/SVG). Contrast may drop.",
@@ -1427,6 +1466,11 @@ const messages: Record<Locale, NestedMessages> = {
       offline: "غير متصل",
       online: "متصل",
       new: "جديد",
+    },
+    errors: {
+      genericTitle: "حدث خطأ ما",
+      genericDesc: "حدث خطأ غير متوقع. أعد تحميل الصفحة للمتابعة.",
+      tryAgain: "إعادة المحاولة",
     },
     auth: {
       loginTitle: "مرحباً بعودتك",
@@ -1492,6 +1536,17 @@ const messages: Record<Locale, NestedMessages> = {
       firstSyncKeep: "إبقاء محلي",
       firstSyncCancel: "إلغاء",
       pushProgress: "جارٍ المزامنة {current}/{total}...",
+      storageUnavailable: "التخزين المحلي غير متاح مؤقتاً.",
+    },
+    pwa: {
+      newVersionAvailable: "يتوفر إصدار جديد من التطبيق.",
+      refreshToUpdate: "تحديث الآن",
+    },
+    offline: {
+      title: "أنت غير متصل بالإنترنت",
+      desc: "أعد الاتصال للمتابعة. تبقى رموز QR الخاصة بك متاحة على هذا الجهاز.",
+      retry: "إعادة المحاولة",
+      reconnecting: "تمت استعادة الاتصال...",
     },
     profile: {
       title: "الملف الشخصي",
@@ -1647,6 +1702,7 @@ const messages: Record<Locale, NestedMessages> = {
       exportReport: "تقرير",
       exportNoData: "لا توجد عمليات مسح للتصدير لهذا الفلتر.",
       exportCount: "{count} صفوف جاهزة للتصدير.",
+      exportLoad: "تحميل بيانات المسح",
       exportToast: "بدأ التنزيل",
       reportTitle: "QR Manager — تقرير المسح",
       reportGenerated: "أُنشئ في",
@@ -1720,6 +1776,7 @@ const messages: Record<Locale, NestedMessages> = {
       title: "QR Codes الخاصة بي",
       subtitle: "يتم تخزين رموز QR الخاصة بك محليا على هذا الجهاز.",
       searchPlaceholder: "ابحث عن رموز QR...",
+      more: "مزيد من الإجراءات",
       status: {
         all: "الكل",
         static: "ثابت",
@@ -2083,6 +2140,7 @@ const messages: Record<Locale, NestedMessages> = {
       shapeCircle: "دائرة",
       logoErrorType: "صيغة غير مدعومة (PNG أو JPEG أو WebP أو SVG).",
       logoErrorSize: "الملف يتجاوز 2 ميجابايت.",
+      logoErrorContent: "ملف SVG هذا يحتوي على محتوى نشط وتم رفضه.",
       logoDecodeFailed: "تعذر قراءة هذه الصورة.",
       transparent: "خلفية شفافة",
       transparentHint: "لا تُطبع أي خلفية (PNG/SVG). قد ينخفض التباين.",

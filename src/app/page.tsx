@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
-import { HomeRecentQRs } from "@/features/home/home-recent-qrs";
-import { PopularTemplates } from "@/features/templates/components/popular-templates";
+import { HomeDynamicSections } from "./home-dynamic-sections";
 
 const qrTypes = [
   { icon: Globe, name: "Website", desc: "Link to any website", color: "text-blue-500" },
@@ -171,11 +170,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Popular Templates */}
-      <PopularTemplates />
-
-      {/* Recent QR Codes */}
-      <HomeRecentQRs />
+      {/* Popular Templates + Recent QR Codes (client-side lazy) */}
+      <HomeDynamicSections />
 
       {/* CTA */}
       <section className="py-16 sm:py-24 border-t border-border">

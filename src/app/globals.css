@@ -134,4 +134,25 @@
   html {
     @apply font-sans scroll-smooth;
   }
+  /* Arabic has no Latin glyphs in Inter: use the dedicated Arabic font. */
+  html[lang="ar"] body {
+    --font-sans: var(--font-arabic);
+  }
+  /* Consistent keyboard focus ring across all custom buttons/links. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Respect reduced-motion preferences: disable animations/transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LOGO_DATA_URL_MAX_LENGTH } from "../designer/qr-logo";
 import {
   urlSchema,
   wifiSchema,
@@ -10,6 +11,11 @@ import {
 } from "../schemas";
 import { normalizeCustomization } from "../types";
 import type { QRCodeRecord } from "./types";
+
+/** Import caps (Phase 11 hardening): one massive or hostile backup file must
+ *  not stall the app or blow past local storage quotas. */
+export const MAX_IMPORT_QR_CODES = 250;
+export const MAX_IMPORT_JSON_BYTES = 50 * 1024 * 1024;
 
 export const customizationSchema = z.object({
   size: z.number().int().min(64).max(2048),
@@ -24,7 +30,7 @@ export const customizationSchema = z.object({
   frameText: z.string().max(30).optional(),
   logo: z
     .object({
-      dataUrl: z.string().min(1),
+      dataUrl: z.string().min(1).max(LOGO_DATA_URL_MAX_LENGTH),
       size: z.number().min(1).max(45),
       margin: z.number().min(0).max(64),
       shape: z.enum(["square", "rounded", "circle"]),
@@ -112,7 +118,7 @@ export const backupFileSchema = z.object({
   version: z.literal(1),
   exportedAt: z.string().optional(),
   qrCodeVersion: z.literal(1).optional(),
-  qrCodes: z.array(qrRecordSchema),
+  qrCodes: z.array(qrRecordSchema).max(MAX_IMPORT_QR_CODES),
 });
 
 export type QRBackup = z.infer<typeof backupFileSchema>;
@@ -129,6 +135,12 @@ export function buildBackupFile(records: QRCodeRecord[]): QRBackup {
 }
 
 export function parseBackupJson(raw: string): QRBackup {
+  if (raw.length === 0) {
+    throw new Error("Empty backup file");
+  }
+  if (raw.length > MAX_IMPORT_JSON_BYTES) {
+    throw new Error("Backup file too large");
+  }
   let data: unknown;
   try {
     data = JSON.parse(raw);

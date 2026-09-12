@@ -9,12 +9,21 @@ export interface SyncOperation {
   payload?: unknown;
   createdAt: string;
   retryCount: number;
+  /**
+   * The cloud account this operation belongs to. The queue is per-device and
+   * per-user: a queued mutation must never be replayed into another account
+   * when a different user signs in on the same device. `null` marks a legacy
+   * operation enqueued before this field existed; it is attributed to whoever
+   * processes it next.
+   */
+  userId: string | null;
 }
 
 export function createSyncOperation(
   operation: SyncOperationType,
   recordId: string,
-  payload?: unknown
+  payload?: unknown,
+  userId?: string | null
 ): SyncOperation {
   const now = new Date().toISOString();
   return {
@@ -25,6 +34,7 @@ export function createSyncOperation(
     payload,
     createdAt: now,
     retryCount: 0,
+    userId: userId ?? null,
   };
 }
 

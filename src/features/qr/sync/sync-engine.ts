@@ -1,10 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SyncOperation } from "./types";
 import { MAX_RETRY_COUNT } from "./types";
-import { addOperation, listOperations, removeOperation, clearQueue } from "./queue-store";
+import { addOperation, listOperationsForUser, removeOperation, clearQueue } from "./queue-store";
+import { isPermanentSyncError } from "./retry";
 import { SupabaseQRRow } from "../cloud/supabase-repository";
 
 export type ApplyResult = "ok" | "skipped" | "failed";
+
+/** Throw the raw Postgrest error so recovery can inspect code/status/message. */
+function toError(error: { message: string }): Error {
+  return error as Error;
+}
 
 async function applyOperation(
   client: SupabaseClient,
@@ -17,7 +23,7 @@ async function applyOperation(
       .delete()
       .eq("id", op.recordId)
       .eq("user_id", userId);
-    if (error) throw new Error(error.message);
+    if (error) throw toError(error);
     return "ok";
   }
   if (op.operation === "UPDATE" && op.payload) {
@@ -40,7 +46,7 @@ async function applyOperation(
       .eq("user_id", userId)
       .select("id")
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw toError(error);
     return data ? "ok" : "skipped";
   }
   if (op.operation === "CREATE" && op.payload) {
@@ -66,7 +72,7 @@ async function applyOperation(
         } as never,
         { onConflict: "id" }
       );
-    if (error) throw new Error(error.message);
+    if (error) throw toError(error);
     return "ok";
   }
   return "skipped";
@@ -75,6 +81,8 @@ async function applyOperation(
 export interface ProcessQueueResult {
   processed: number;
   failed: boolean;
+  /** True when the failing operation can never succeed (dropped, no retry). */
+  permanent?: boolean;
 }
 
 export async function processQueue(
@@ -82,7 +90,10 @@ export async function processQueue(
   userId: string,
   onProgress?: (processed: number, total: number) => void
 ): Promise<ProcessQueueResult> {
-  const ops = await listOperations();
+  // Only replay operations that belong to this account (legacy ops without a
+  // userId are attributed to the current user). A queued mutation from another
+  // account on the same device must never be written into this one.
+  const ops = await listOperationsForUser(userId);
   let processed = 0;
 
   for (const op of ops) {
@@ -91,13 +102,18 @@ export async function processQueue(
       await removeOperation(op.id);
       processed++;
       onProgress?.(processed, ops.length);
-    } catch {
+    } catch (error) {
+      if (isPermanentSyncError(error)) {
+        // Never retry: the entry is dropped and the UI is told it failed.
+        await removeOperation(op.id);
+        return { processed, failed: true, permanent: true };
+      }
       if (op.retryCount + 1 >= MAX_RETRY_COUNT) {
         await removeOperation(op.id);
       } else {
         await addOperation({ ...op, retryCount: op.retryCount + 1 });
       }
-      return { processed, failed: true };
+      return { processed, failed: true, permanent: false };
     }
   }
 

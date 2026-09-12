@@ -85,13 +85,13 @@ export default function ResetPasswordPage() {
                 {t("auth.passwordLabel")}
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Lock className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
                   autoComplete="new-password"
                   placeholder={t("auth.passwordPlaceholder")}
-                  className="pl-10"
+                  className="ps-10"
                   aria-invalid={!!errors.password}
                   {...register("password")}
                 />
@@ -106,13 +106,13 @@ export default function ResetPasswordPage() {
                 {t("auth.confirmPasswordLabel")}
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Lock className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
                   type="password"
                   autoComplete="new-password"
                   placeholder={t("auth.passwordPlaceholder")}
-                  className="pl-10"
+                  className="ps-10"
                   aria-invalid={!!errors.confirmPassword}
                   {...register("confirmPassword")}
                 />

@@ -58,13 +58,13 @@ export default function LoginPage() {
                 {t("auth.emailLabel")}
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Mail className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
                   autoComplete="email"
                   placeholder={t("auth.emailPlaceholder")}
-                  className="pl-10"
+                  className="ps-10"
                   aria-invalid={!!errors.email}
                   {...register("email")}
                 />
@@ -87,13 +87,13 @@ export default function LoginPage() {
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Lock className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
                   autoComplete="current-password"
                   placeholder={t("auth.passwordPlaceholder")}
-                  className="pl-10"
+                  className="ps-10"
                   aria-invalid={!!errors.password}
                   {...register("password")}
                 />

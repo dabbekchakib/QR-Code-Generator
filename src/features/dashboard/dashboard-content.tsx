@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQRs } from "@/features/qr/hooks/use-qrs";
+import type { QRCodeRecord } from "@/features/qr/storage/types";
 import { useQRPreviewDataUrl, useQRTypeName } from "@/features/qr/hooks/use-qr-preview";
 import { useQRContent } from "@/features/qr/hooks/use-qr-preview";
 import { useQRPublication } from "@/features/qr/hooks/use-qr-publication";
@@ -25,17 +26,13 @@ import { useScanSummary } from "@/features/analytics/hooks/use-analytics";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { QuickCreate } from "@/features/templates/components/quick-create";
 
-function RecentQRCard({ id }: { id: string }) {
-  const { records } = useQRs();
+function RecentQRCard({ record }: { record: QRCodeRecord }) {
   const { t } = useI18n();
-  const record = records.find((r) => r.id === id);
 
-  const content = useQRContent(record ?? null);
-  const preview = useQRPreviewDataUrl(content, record?.customization ?? null);
-  const typeName = useQRTypeName(record?.type ?? null);
-  const publication = useQRPublication(record ?? null);
-
-  if (!record) return null;
+  const content = useQRContent(record);
+  const preview = useQRPreviewDataUrl(content, record.customization ?? null);
+  const typeName = useQRTypeName(record.type);
+  const publication = useQRPublication(record);
 
   const permanentUrl =
     record.isDynamic && record.shortCode
@@ -53,6 +50,8 @@ function RecentQRCard({ id }: { id: string }) {
                 <img
                   src={preview}
                   alt={record.name}
+                  decoding="async"
+                  loading="lazy"
                   className="size-12 rounded-lg border bg-white shrink-0"
                 />
               ) : (
@@ -299,7 +298,7 @@ export function DashboardContent() {
             ) : (
               <div className="space-y-3">
                 {recent.slice(0, 5).map((r) => (
-                  <RecentQRCard key={r.id} id={r.id} />
+                  <RecentQRCard key={r.id} record={r} />
                 ))}
               </div>
             )}

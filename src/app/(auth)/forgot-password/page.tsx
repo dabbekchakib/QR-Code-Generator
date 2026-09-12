@@ -65,13 +65,13 @@ export default function ForgotPasswordPage() {
                   {t("auth.emailLabel")}
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Mail className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
                     autoComplete="email"
                     placeholder={t("auth.emailPlaceholder")}
-                    className="pl-10"
+                    className="ps-10"
                     aria-invalid={!!errors.email}
                     {...register("email")}
                   />

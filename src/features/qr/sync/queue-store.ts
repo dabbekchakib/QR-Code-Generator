@@ -21,9 +21,27 @@ export async function listOperations(): Promise<SyncOperation[]> {
   );
 }
 
+/**
+ * Operations that belong to the given account. Legacy operations without a
+ * `userId` (queued before user scoping existed) are attributed to the current
+ * account so pre-upgrade pending changes are not lost.
+ */
+export async function listOperationsForUser(
+  userId: string
+): Promise<SyncOperation[]> {
+  const all = await listOperations();
+  return all.filter((op) => !op.userId || op.userId === userId);
+}
+
 export async function pendingCount(): Promise<number> {
   const db = await getDB();
   return db.count(DB_QUEUE_STORE);
+}
+
+/** Count of queued mutations for the given account (see listOperationsForUser). */
+export async function pendingCountForUser(userId: string): Promise<number> {
+  const all = await listOperations();
+  return all.filter((op) => !op.userId || op.userId === userId).length;
 }
 
 /** Is there at least one queued mutation for a specific record? Used to tell a

@@ -2,10 +2,12 @@
 
 import { Wifi, WifiOff } from "lucide-react";
 import { useOnlineStatus } from "@/hooks";
+import { useI18n } from "@/i18n/provider";
 import { Badge } from "@/components/ui/badge";
 
 export function OnlineIndicator() {
   const isOnline = useOnlineStatus();
+  const { t } = useI18n();
 
   return (
     <Badge
@@ -15,12 +17,12 @@ export function OnlineIndicator() {
       {isOnline ? (
         <>
           <Wifi className="size-3" />
-          <span className="hidden sm:inline">Online</span>
+          <span className="hidden sm:inline">{t("common.online")}</span>
         </>
       ) : (
         <>
           <WifiOff className="size-3" />
-          <span className="hidden sm:inline">Offline</span>
+          <span className="hidden sm:inline">{t("common.offline")}</span>
         </>
       )}
     </Badge>

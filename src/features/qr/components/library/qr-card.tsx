@@ -163,7 +163,11 @@ export function QRCard({ record, onToggleFavorite, onDuplicate, onDelete }: QRCa
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button variant="ghost" size="sm" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t("detail.downloadPng")}
+                  />
                 }
               >
                 <Download className="size-4" />
@@ -186,7 +190,7 @@ export function QRCard({ record, onToggleFavorite, onDuplicate, onDelete }: QRCa
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button variant="ghost" size="icon" />
+                  <Button variant="ghost" size="icon" aria-label={t("library.more")} />
                 }
               >
                 <MoreVertical className="size-4" />

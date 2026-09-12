@@ -34,6 +34,22 @@ describe("csvEscape", () => {
     expect(csvEscape("تقرير المسح")).toBe("تقرير المسح");
     expect(csvEscape("café")).toBe("café");
   });
+
+  it("neutralizes spreadsheet formula injection", () => {
+    expect(csvEscape("=SUM(A1:A5)")).toBe("'=SUM(A1:A5)");
+    expect(csvEscape("+1-1")).toBe("'+1-1");
+    expect(csvEscape("-1+1")).toBe("'-1+1");
+    expect(csvEscape("@SUM")).toBe("'@SUM");
+    expect(csvEscape("\t=cmd")).toBe("'\t=cmd");
+    // Contains a comma, so the neutralized value is also quoted.
+    expect(csvEscape("=1,2")).toBe('"\'=1,2"');
+    // Prefix is applied before quoting so the final cell starts with the quote.
+    expect(csvEscape('=x,"quote"')).toBe('"\'=x,""quote"""');
+  });
+
+  it("does not alter values that legitimately start with a digit", () => {
+    expect(csvEscape("2026-08-15")).toBe("2026-08-15");
+  });
 });
 
 describe("buildScansCsv", () => {

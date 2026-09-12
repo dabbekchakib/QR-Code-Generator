@@ -49,6 +49,7 @@ export class SupabaseQRRepository
     const { data, error } = await this.table()
       .select("*")
       .eq("id", id)
+      .eq("user_id", this.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     return data ? SupabaseQRRepository.toRecord(data) : null;
@@ -69,6 +70,7 @@ export class SupabaseQRRepository
         template_id: record.templateId ?? null,
       } as never)
       .eq("id", record.id)
+      .eq("user_id", this.userId)
       .select("*")
       .single();
     if (error) throw new Error(error.message);
@@ -76,7 +78,7 @@ export class SupabaseQRRepository
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await this.table().delete().eq("id", id);
+    const { error } = await this.table().delete().eq("id", id).eq("user_id", this.userId);
     if (error) throw new Error(error.message);
   }
 

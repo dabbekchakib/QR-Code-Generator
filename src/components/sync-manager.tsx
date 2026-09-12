@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth/use-auth";
 import { qrService } from "@/features/qr/service/qr-service";
 import { useSyncStore } from "@/features/qr/sync/sync-store";
-import { pendingCount } from "@/features/qr/sync/queue-store";
+import { pendingCountForUser } from "@/features/qr/sync/queue-store";
 
 function getPromptKey(userId: string): string {
   return `qr-sync-prompt-v1-${userId}`;
@@ -47,9 +47,9 @@ export function SyncManager() {
   // the first-login sync dialog when the user has local records.
   useEffect(() => {
     if (status !== "authenticated" || !user) return;
-    void pendingCount().then((count) =>
-      useSyncStore.getState().setPendingCount(count)
-    );
+    void pendingCountForUser(user.id)
+      .then((count) => useSyncStore.getState().setPendingCount(count))
+      .catch(() => useSyncStore.getState().setStorageError(true));
 
     if (promptedFor.current === user.id) return;
     promptedFor.current = user.id;
@@ -76,6 +76,7 @@ export function SyncManager() {
           },
         });
       } catch {
+        useSyncStore.getState().setStorageError(true);
         markSyncPromptShown(user.id);
       }
     })();

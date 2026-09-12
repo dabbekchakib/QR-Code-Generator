@@ -10,6 +10,7 @@ import {
   validateLogoFile,
   readLogoAsDataUrl,
   decodeLogoImage,
+  validateLogoDataUrl,
   LOGO_ACCEPTED_MIME_TYPES,
   LOGO_MAX_BYTES,
 } from "../../designer/qr-logo";
@@ -41,6 +42,17 @@ export function QRLogoUploader({ logo, onChange }: QRLogoUploaderProps) {
     setBusy(true);
     try {
       const dataUrl = await readLogoAsDataUrl(file);
+      const content = validateLogoDataUrl(dataUrl);
+      if (!content.ok) {
+        setError(
+          content.error === "CONTENT"
+            ? t("design.logoErrorContent")
+            : content.error === "SIZE"
+              ? t("design.logoErrorSize")
+              : t("design.logoErrorType")
+        );
+        return;
+      }
       const decoded = await decodeLogoImage(dataUrl);
       if (!decoded) {
         setError(t("design.logoDecodeFailed"));

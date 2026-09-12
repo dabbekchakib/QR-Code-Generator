@@ -9,10 +9,15 @@ import { createSyncOperation, type SyncOperation } from "../sync/types";
 import {
   enqueue,
   pendingCount,
+  pendingCountForUser,
   discardOperationsForRecord,
   clearQueue,
 } from "../sync/queue-store";
 import { reconcileRecords } from "../sync/conflicts";
+import {
+  retryBackoffDelay,
+  MAX_SCHEDULED_RETRIES,
+} from "../sync/retry";
 import {
   generateShortCode,
   MAX_SHORT_CODE_ATTEMPTS,
@@ -26,6 +31,74 @@ const localRepo = new IndexedDBQRRepository();
 let authClient: SupabaseClient | null = null;
 let authUserId: string | null = null;
 let cloudRepo: SupabaseQRRepository | null = null;
+
+/* -------------------------------------------------------------------------- */
+/*  Storage & retry guards                                                    */
+/* -------------------------------------------------------------------------- */
+
+let retryAttempt = 0;
+let scheduledRetries = 0;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Show a user-facing "local storage unavailable" state and log the technical
+ * error without leaking any private data (never record contents, names or ids).
+ */
+function surfaceStorageError(error: unknown): void {
+  const message = error instanceof Error ? error.message : "unknown error";
+  console.error(`[qr] local storage error: ${message}`);
+  useSyncStore.getState().setStorageError(true);
+}
+
+async function storageGuard<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    surfaceStorageError(error);
+    throw error;
+  }
+}
+
+function resetSyncRetry(): void {
+  retryAttempt = 0;
+  scheduledRetries = 0;
+}
+
+/**
+ * Re-run the queue later with an exponential backoff (1s, 2s, 4s, 8s). The
+ * retry budget (`MAX_SCHEDULED_RETRIES`) is only consumed by attempts that
+ * actually run online: waking up while offline preserves the budget and lets
+ * the "back online" handler in SyncManager trigger the sync instead.
+ */
+function scheduleSyncRetry(): void {
+  if (retryTimer) return;
+  if (scheduledRetries >= MAX_SCHEDULED_RETRIES) return;
+  const delay = retryBackoffDelay(retryAttempt);
+  retryAttempt++;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void runScheduledSync();
+  }, delay);
+}
+
+async function runScheduledSync(): Promise<void> {
+  if (!isAuthed()) {
+    resetSyncRetry();
+    return;
+  }
+  if (!useSyncStore.getState().online) {
+    // Still offline: never burn the retry budget on a doomed attempt.
+    return;
+  }
+  if (scheduledRetries >= MAX_SCHEDULED_RETRIES) return;
+  scheduledRetries++;
+  try {
+    await syncNow();
+    resetSyncRetry();
+  } catch {
+    /* the next failure path re-schedules with an escalated delay */
+  }
+}
 
 function setAuth(client: SupabaseClient | null, userId: string | null) {
   authClient = client;
@@ -63,8 +136,16 @@ async function updateStatus(status: SyncStatusValue) {
 }
 
 async function refreshPendingCount() {
-  const count = await pendingCount();
-  useSyncStore.getState().setPendingCount(count);
+  try {
+    const count = authUserId
+      ? await pendingCountForUser(authUserId)
+      : await pendingCount();
+    useSyncStore.getState().setPendingCount(count);
+    // A successful IndexedDB read means local storage is healthy again.
+    useSyncStore.getState().setStorageError(false);
+  } catch (error) {
+    surfaceStorageError(error);
+  }
 }
 
 async function pushMutation(op: SyncOperation) {
@@ -174,12 +255,12 @@ function clearAuth() {
 
 /** Return all local records, unconditionally. */
 async function list(): Promise<QRCodeRecord[]> {
-  return localRepo.list();
+  return storageGuard(() => localRepo.list());
 }
 
 /** Get a single local record (cache-first). */
 async function get(id: string): Promise<QRCodeRecord | null> {
-  return localRepo.get(id);
+  return storageGuard(() => localRepo.get(id));
 }
 
 /**
@@ -187,7 +268,7 @@ async function get(id: string): Promise<QRCodeRecord | null> {
  * online, then persist any cloud changes back to local storage.
  */
 async function refresh(): Promise<QRCodeRecord[]> {
-  const local = await localRepo.list();
+  const local = await storageGuard(() => localRepo.list());
   if (!isAuthed() || !useSyncStore.getState().online) return local;
 
   updateStatus("syncing");
@@ -212,28 +293,28 @@ async function refresh(): Promise<QRCodeRecord[]> {
 }
 
 async function create(input: CreateQRCodeRecord): Promise<QRCodeRecord> {
-  const local = await localRepo.create(input);
+  const local = await storageGuard(() => localRepo.create(input));
   if (isAuthed()) {
-    const op = createSyncOperation("CREATE", local.id, toCloudRow(local));
+    const op = createSyncOperation("CREATE", local.id, toCloudRow(local), authUserId);
     await pushMutation(op);
   }
   return local;
 }
 
 async function update(record: QRCodeRecord): Promise<QRCodeRecord> {
-  const updated = await localRepo.update(record);
+  const updated = await storageGuard(() => localRepo.update(record));
   if (isAuthed()) {
-    const op = createSyncOperation("UPDATE", updated.id, toCloudRow(updated));
+    const op = createSyncOperation("UPDATE", updated.id, toCloudRow(updated), authUserId);
     await pushMutation(op);
   }
   return updated;
 }
 
 async function deleteRecord(id: string): Promise<void> {
-  await localRepo.delete(id);
+  await storageGuard(() => localRepo.delete(id));
   if (isAuthed()) {
     await discardOperationsForRecord(id);
-    const op = createSyncOperation("DELETE", id);
+    const op = createSyncOperation("DELETE", id, undefined, authUserId);
     await pushMutation(op);
   }
 }
@@ -243,7 +324,7 @@ async function pushLocalToCloud(
   onProgress?: (current: number, total: number) => void
 ): Promise<number> {
   if (!isAuthed()) return 0;
-  const local = await localRepo.list();
+  const local = await storageGuard(() => localRepo.list());
   let pushed = 0;
 
   for (let i = 0; i < local.length; i++) {
@@ -277,10 +358,16 @@ async function pushLocalToCloud(
 
 /** Process any pending queue entries, then refresh the local cache. */
 async function syncNow(): Promise<QRCodeRecord[]> {
-  if (!isAuthed()) return localRepo.list();
+  if (!isAuthed()) return storageGuard(() => localRepo.list());
   updateStatus("syncing");
-  await processQueue(authClient!, authUserId!);
+  const result = await processQueue(authClient!, authUserId!);
   await refreshPendingCount();
+  if (result.failed) {
+    if (!result.permanent) scheduleSyncRetry();
+    updateStatus("error");
+    return storageGuard(() => localRepo.list());
+  }
+  resetSyncRetry();
   const merged = await refresh();
   return merged;
 }
@@ -331,7 +418,7 @@ async function createDynamic(
       if (!isAuthed()) return local;
 
       if (!useSyncStore.getState().online) {
-        const op = createSyncOperation("CREATE", local.id, toCloudRow(local));
+        const op = createSyncOperation("CREATE", local.id, toCloudRow(local), authUserId);
         await enqueue(op);
         await refreshPendingCount();
         return local;
@@ -354,7 +441,7 @@ async function createDynamic(
         }
         // Any other cloud failure: keep the local record and let the sync
         // queue replay it later.
-        const op = createSyncOperation("CREATE", local.id, toCloudRow(local));
+        const op = createSyncOperation("CREATE", local.id, toCloudRow(local), authUserId);
         await enqueue(op);
         await refreshPendingCount();
         return local;
@@ -409,7 +496,7 @@ async function setDynamicStatus(
 async function clearAll(): Promise<void> {
   if (isAuthed()) {
     await cloudRepo!.clear().catch(() => {});
-    await clearQueue();
+    await clearQueue().catch(() => {});
   }
-  await localRepo.clear();
+  await storageGuard(() => localRepo.clear());
 }

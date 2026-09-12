@@ -3,6 +3,7 @@
 import { useSidebarStore } from "@/hooks";
 import { Logo } from "@/components/logo";
 import { OnlineIndicator } from "@/components/online-indicator";
+import { SyncStatus } from "@/components/sync-status";
 import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
@@ -26,6 +27,7 @@ export function Header() {
         <Logo size="sm" showText={false} />
       </div>
       <div className="flex items-center gap-2">
+        <SyncStatus />
         <OnlineIndicator />
         <UserMenu />
       </div>

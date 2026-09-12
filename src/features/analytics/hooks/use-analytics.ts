@@ -289,7 +289,9 @@ export function useQRComparison(
   return { rows, loading, error, refresh };
 }
 
-/** Raw audit rows for CSV / JSON export under the active filters. */
+/** Raw audit rows for CSV / JSON export under the active filters.
+ *  Lazily fetched — the RPC only runs when the user actually requests an
+ *  export, so a raw row set is never pulled for a mere analytics visit. */
 export function useScansExport(selection: AnalyticsSelection): {
   result: ExportResult | null;
   loading: boolean;
@@ -300,8 +302,10 @@ export function useScansExport(selection: AnalyticsSelection): {
   const { status } = useAuth();
   const online = useOnlineStatus();
   const [result, setResult] = useState<ExportResult | null>(null);
+  const [resultKey, setResultKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requested, setRequested] = useState(false);
   const [tick, setTick] = useState(0);
 
   const selectionKey = keyOf(
@@ -311,11 +315,15 @@ export function useScansExport(selection: AnalyticsSelection): {
     selection.custom?.to ?? null
   );
 
+  // Only expose results that match the current selection: after a filter
+  // change the previous export set is hidden until the new one arrives.
+  const matchesSelection = resultKey === selectionKey;
+
   useEffect(() => {
+    if (!requested) return;
     let cancelled = false;
     const id = setTimeout(() => {
       if (status !== "authenticated" || !online) {
-        setResult(null);
         setLoading(false);
         return;
       }
@@ -332,7 +340,10 @@ export function useScansExport(selection: AnalyticsSelection): {
             end: range.end,
             offsetMinutes,
           });
-          if (!cancelled) setResult(data);
+          if (!cancelled) {
+            setResult(data);
+            setResultKey(selectionKey);
+          }
         } catch {
           if (!cancelled) {
             setResult(null);
@@ -349,11 +360,19 @@ export function useScansExport(selection: AnalyticsSelection): {
       clearTimeout(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase, status, online, selectionKey, selection.qrId, tick]);
+  }, [supabase, status, online, requested, selectionKey, selection.qrId, tick]);
 
-  const refresh = useCallback(() => setTick((t) => t + 1), []);
+  const refresh = useCallback(() => {
+    setRequested(true);
+    setTick((t) => t + 1);
+  }, []);
 
-  return { result, loading, error, refresh };
+  return {
+    result: matchesSelection ? result : null,
+    loading,
+    error: matchesSelection ? error : null,
+    refresh,
+  };
 }
 
 /** All-time scan summary for the dashboard / detail widgets (needs 1 RPC). */

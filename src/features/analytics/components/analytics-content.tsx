@@ -545,7 +545,7 @@ function TopQRCard({
           <Button
             variant="ghost"
             size="sm"
-            className="-mr-2"
+            className="-me-2"
             onClick={() => setShowAll((v) => !v)}
             nativeButton={false}
           >
@@ -629,7 +629,7 @@ function PerformanceTable({
             <table className="w-full min-w-[680px] text-sm">
               <caption className="sr-only">{t("analytics.performanceTitle")}</caption>
               <thead>
-                <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                <tr className="border-b border-border text-start text-xs text-muted-foreground">
                   <th scope="col" className="px-4 py-3 font-medium">{t("analytics.perfColumns.qrCode")}</th>
                   <th scope="col" className="px-4 py-3 font-medium">{t("analytics.perfColumns.type")}</th>
                   <th scope="col" className="px-4 py-3 font-medium text-right">{t("analytics.perfColumns.totalScans")}</th>
@@ -803,7 +803,7 @@ function ComparisonTable({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-xs text-muted-foreground">
+            <tr className="border-b border-border text-start text-xs text-muted-foreground">
               <th scope="col" className="px-3 py-2 font-medium">{t("analytics.perfColumns.qrCode")}</th>
               <th scope="col" className="px-3 py-2 font-medium text-right">{t("analytics.perfColumns.totalScans")}</th>
               <th scope="col" className="px-3 py-2 font-medium text-right">{t("analytics.shareOfTotal")}</th>
@@ -907,7 +907,7 @@ function ExportSection({
             <div className="h-9 w-32 rounded-lg bg-muted/60 animate-pulse" />
             <div className="h-9 w-32 rounded-lg bg-muted/60 animate-pulse" />
           </div>
-        ) : (
+        ) : exportResult ? (
           <>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={doCsv} nativeButton={false} disabled={disabled}>
@@ -929,6 +929,11 @@ function ExportSection({
                 : t("analytics.exportCount", { count: total })}
             </p>
           </>
+        ) : (
+          <Button variant="outline" size="sm" onClick={onRetry} nativeButton={false}>
+            <Download className="size-4" />
+            {t("analytics.exportLoad")}
+          </Button>
         )}
       </CardContent>
     </Card>

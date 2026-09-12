@@ -6,7 +6,19 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 10 (Current)
+### Phase 11 (Current) — PWA Offline + Performance + Security Hardening
+- **Service worker hardened** — `public/sw.js` now: precaches the app shell, manifest and icons per URL (a failing entry can never abort an install), **warms up the hashed `/_next/static` assets** referenced by the precached pages so a fresh install works offline immediately, stores each navigation under its **exact URL** (the offline home is never overwritten by the last visited page), uses network-first navigations with an offline fallback chain, and **never caches Supabase/auth responses or anything carrying an `Authorization` header**
+- **Controlled updates** — the new worker no longer calls `skipWaiting()` on install: it waits, the "Refresh to update" banner posts `SKIP_WAITING` only when the user agrees; `activate` cleans old caches
+- **Sync queue per-user scoped** — every queued mutation now carries its `userId`; the sync engine replays **only the current account's operations**, so one person's offline changes can never be written into another account on the same device. Pending badges count per user, and the legacy (pre-upgrade) queue is attributed to the current account so no pending work is lost
+- **Retry policy corrected** — the scheduled retry backoff now actually escalates (1s → 2s → 4s → 8s, capped) and **offline wake-ups no longer consume the retry budget** (`MAX_SCHEDULED_RETRIES` is spent only on real attempts)
+- **Security hardening** — CSV export neutralizes spreadsheet formula injection (`=`/`+`/`-`/`@`/tab/carriage-return prefixes → `'` prefix); SVG center-logos are content-sanitized (scripts, event handlers, `<foreignObject>`, `javascript:`/`vbscript:`/`data:text/html`, external `href`/`src`/`url()` are refused); vCard/WiFi payloads strip CR/LF so fields can never inject extra lines; backup import is capped (250 QR codes / 50 MB / per-logo data-URL limit); and `record_qr_scan` gained a generous **per-code flood guard** (migration 07, 1200 scans / 10 min — never clips real traffic, keeps spyware-style floods out of analytics)
+- **Performance** — Auth and the sync machinery moved out of the root providers into the `(app)`/`(auth)` layouts: the **homepage and offline/error routes no longer initialize the Supabase client or fire a session request**; `Logo` is a server component; recent-QR cards receive their record as a prop (no more per-card IndexedDB re-reads); QR preview images use `decoding="async" decoding`; and every route has a **matched loading skeleton** instead of a generic spinner
+- **UI/i18n** — the online/offline indicator is localized (FR/EN/AR); the sync badge shows a clock whenever changes are pending offline; new SVG-logo error messages are translated
+- **PWA metadata** — `theme_color` now matches the light viewport color (`#F8FAFC`); the root layout declares `appleWebApp` (capable standalone, `no telephone` autolink)
+- **Docs & security notes** — new `SECURITY.md` (data model, RLS, service-worker cache policy, CSP trade-offs, known limitations incl. shared-device multi-account) and `TESTING.md` (matrix + manual checklist)
+- **Unit tests** — new coverage for per-user queue scoping, SVG-logo sanitization, CSV formula neutralization and import caps. Suite total: **350 tests, all green**
+
+### Phase 10
 - **Advanced analytics & reports** — `/analytics` is now a full reporting dashboard built exclusively on real `qr_scans` data: **5 KPI cards** (Total / Today / This Week / This Month / **Avg per day**), a dependency-free SVG **Scans over time** chart, **Top QR Codes** (with View all), device/OS/browser breakdowns, **QR performance table**, **QR comparison**, and CSV/JSON/report **exports**
 - **URL-driven filters** — the URL is the source of truth (`/analytics?range=…&qr=…[&from=&to=]`); period (Today / 7 / 30 / 90 days / All time / **Custom range**) and QR filters, with a **custom from/to range** validated as local calendar dates (≤ 365 days, end never in the future). Every URL value is re-validated on load; anything invalid falls back to a safe default
 - **Smarter granularity** — trend buckets adapt to the selected window: hourly ≤ 48 h, **daily ≤ ~200 days**, weekly ≤ ~800 days, monthly otherwise. "Last 30 days" is now bucketed per day
@@ -170,8 +182,8 @@ src/
 │   ├── (auth)/             # Auth routes (standalone layout)
 │   │   ├── login/
 │   │   └── register/
-│   ├── layout.tsx          # Root layout
-│   ├── providers.tsx       # Theme, i18n, SW providers
+│   ├── layout.tsx          # Root layout (fonts, metadata, viewport, providers)
+│   ├── providers.tsx       # Theme, i18n, SW + toaster providers (auth lives in (app)/(auth))
 │   ├── page.tsx            # Landing page
 │   ├── qr/
 │   │   └── [shortCode]/    # Public dynamic QR redirect route
@@ -269,7 +281,7 @@ npm install
    NEXT_PUBLIC_APP_URL=http://localhost:3000  # your public origin (permanent QR link)
    ```
 
-3. Apply the migrations in `supabase/migrations/` (creates `profiles` and `qr_codes` tables with row-level security; migration 03 adds the dynamic QR fields and the `resolve_dynamic_qr` resolver function; migration 05 adds the optional `template_id` column).
+3. Apply the migrations in `supabase/migrations/` (creates `profiles` and `qr_codes` tables with row-level security; migration 03 adds the dynamic QR fields and the `resolve_dynamic_qr` resolver function; migration 05 adds the optional `template_id` column; migration 06 adds the advanced-analytics SQL functions; migration 07 adds the scan anti-flood guard).
 
 Without this config the app still works fully locally, in anonymous mode.
 

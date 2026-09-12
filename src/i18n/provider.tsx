@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   type Locale,
   defaultLocale,
@@ -21,22 +21,47 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+const LOCALE_COOKIE = "qr-manager-locale";
+const LOCALE_STORAGE_KEY = "qr-manager-locale";
+
+function persistLocale(locale: Locale): void {
+  try {
+    localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  } catch {
+    /* storage unavailable — cookie still keeps SSR in sync */
+  }
+  try {
+    document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; samesite=Lax`;
+  } catch {
+    /* ignore */
+  }
+}
+
+function applyLocaleToDocument(locale: Locale): void {
+  document.documentElement.dir = rtlLocales.includes(locale) ? "rtl" : "ltr";
+  document.documentElement.lang = locale;
+}
+
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("qr-manager-locale") as Locale | null;
+      const stored = localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null;
       if (stored && locales.includes(stored)) return stored;
     }
     return defaultLocale;
   });
 
+  // Keep lang/dir and the cookie in sync with the active locale (including the
+  // very first mount, which SSR cannot know about on the client).
+  useEffect(() => {
+    applyLocaleToDocument(locale);
+    persistLocale(locale);
+  }, [locale]);
+
   const setLocale = useCallback((newLocale: Locale) => {
     setLocaleState(newLocale);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("qr-manager-locale", newLocale);
-    }
-    document.documentElement.dir = rtlLocales.includes(newLocale) ? "rtl" : "ltr";
-    document.documentElement.lang = newLocale;
+    applyLocaleToDocument(newLocale);
+    persistLocale(newLocale);
   }, []);
 
   const t = useCallback(

@@ -4,7 +4,9 @@ import { getDB, resetDBForTests } from "../storage/db";
 import {
   enqueue,
   listOperations,
+  listOperationsForUser,
   pendingCount,
+  pendingCountForUser,
   removeOperation,
   discardOperationsForRecord,
   clearQueue,
@@ -103,5 +105,36 @@ describe("SyncQueue", () => {
     expect(await hasPendingOperations("a")).toBe(true);
     expect(await hasPendingOperations("b")).toBe(true);
     expect(await hasPendingOperations("c")).toBe(false);
+  });
+
+  it("scopes operations and counts per user", async () => {
+    await enqueue(createSyncOperation("CREATE", "a", undefined, "user-A"));
+    await enqueue(createSyncOperation("UPDATE", "b", undefined, "user-A"));
+    await enqueue(createSyncOperation("CREATE", "c", undefined, "user-B"));
+    await enqueue(createSyncOperation("DELETE", "d"));
+
+    expect(await pendingCount()).toBe(4);
+    expect(await pendingCountForUser("user-A")).toBe(3);
+    expect(await pendingCountForUser("user-B")).toBe(2);
+    expect(await pendingCountForUser("user-C")).toBe(1);
+
+    const opsForA = await listOperationsForUser("user-A");
+    expect(opsForA.map((o) => o.recordId).sort()).toEqual(["a", "b", "d"]);
+    const opsForB = await listOperationsForUser("user-B");
+    expect(opsForB.map((o) => o.recordId).sort()).toEqual(["c", "d"]);
+
+    // A legacy op without a userId is attributed to whoever processes it so
+    // pre-upgrade pending changes are never replayed into another account's
+    // count twice over.
+    const legacy = createSyncOperation("CREATE", "d");
+    expect(legacy.userId).toBeNull();
+  });
+
+  it("a CREATE after a queued user-owned DELETE replaces the DELETE", async () => {
+    await enqueue(createSyncOperation("DELETE", "a", undefined, "user-A"));
+    await enqueue(createSyncOperation("CREATE", "a", { name: "again" }, "user-A"));
+    const ops = await listOperationsForUser("user-A");
+    expect(ops).toHaveLength(1);
+    expect(ops[0].operation).toBe("CREATE");
   });
 });

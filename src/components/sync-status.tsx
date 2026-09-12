@@ -17,21 +17,29 @@ function SyncLabel({ status }: { status: SyncStatusValue }) {
 }
 
 export function SyncStatus() {
-  const { status, pendingCount, online } = useSyncStore();
+  const { status, pendingCount, online, storageError } = useSyncStore();
   const { t } = useI18n();
+
+  // Local storage is failing: show a user-facing message regardless of mode.
+  if (storageError) {
+    return (
+      <Badge variant="destructive" className="gap-1.5 text-xs">
+        <AlertTriangle className="size-3" />
+        <span className="hidden sm:inline">{t("sync.storageUnavailable")}</span>
+      </Badge>
+    );
+  }
 
   // Anonymous/local mode or nothing pending: show nothing extra.
   if (status === "idle" && pendingCount === 0) return null;
 
   const Icon =
-    status === "syncing" ? (
-      <Loader2 className="size-3 animate-spin" />
-    ) : status === "error" ? (
+    status === "error" ? (
       <AlertTriangle className="size-3" />
-    ) : status === "synced" && pendingCount > 0 ? (
+    ) : status === "syncing" ? (
+      <Loader2 className="size-3 animate-spin" />
+    ) : pendingCount > 0 ? (
       <Clock className="size-3" />
-    ) : status === "synced" ? (
-      <CheckCircle2 className="size-3" />
     ) : !online ? (
       <WifiOff className="size-3" />
     ) : (

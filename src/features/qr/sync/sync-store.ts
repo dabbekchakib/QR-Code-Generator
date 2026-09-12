@@ -13,12 +13,15 @@ interface SyncState {
   firstSyncPrompt: FirstSyncPrompt | null;
   lastSyncAt: string | null;
   online: boolean;
+  /** True when IndexedDB is failing; the UI shows a user-facing message. */
+  storageError: boolean;
   setStatus(status: SyncStatusValue): void;
   setPendingCount(count: number): void;
   setFirstSyncPrompt(prompt: FirstSyncPrompt | null): void;
   clearFirstSyncPrompt(): void;
   touchLastSync(): void;
   setOnline(online: boolean): void;
+  setStorageError(hasError: boolean): void;
 }
 
 export const useSyncStore = create<SyncState>((set) => ({
@@ -27,6 +30,7 @@ export const useSyncStore = create<SyncState>((set) => ({
   firstSyncPrompt: null,
   lastSyncAt: null,
   online: typeof navigator !== "undefined" ? navigator.onLine : true,
+  storageError: false,
   setStatus(status) {
     set({ status });
   },
@@ -44,5 +48,8 @@ export const useSyncStore = create<SyncState>((set) => ({
   },
   setOnline(online) {
     set({ online });
+  },
+  setStorageError(hasError) {
+    set({ storageError: hasError });
   },
 }));

@@ -211,10 +211,10 @@ export function QRListContent() {
       {/* Search + Filters */}
       <div className="flex flex-col gap-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             placeholder={t("library.searchPlaceholder")}
-            className="pl-10"
+            className="ps-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

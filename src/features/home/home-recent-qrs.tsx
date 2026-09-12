@@ -5,17 +5,14 @@ import { ArrowRight, QrCode } from "lucide-react";
 import { useQRs } from "@/features/qr/hooks/use-qrs";
 import { useQRPreviewDataUrl, useQRContent, useQRTypeName } from "@/features/qr/hooks/use-qr-preview";
 import { formatUpdatedAt } from "@/features/qr/storage/utils";
+import type { QRCodeRecord } from "@/features/qr/storage/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-function RecentQRCard({ id }: { id: string }) {
-  const { records } = useQRs();
-  const record = records.find((r) => r.id === id);
-  const content = useQRContent(record ?? null);
-  const preview = useQRPreviewDataUrl(content, record?.customization ?? null);
-  const typeName = useQRTypeName(record?.type ?? null);
-
-  if (!record) return null;
+function RecentQRCard({ record }: { record: QRCodeRecord }) {
+  const content = useQRContent(record);
+  const preview = useQRPreviewDataUrl(content, record.customization ?? null);
+  const typeName = useQRTypeName(record.type);
 
   return (
     <Link href={`/qrs/${record.id}`} className="block group">
@@ -27,6 +24,8 @@ function RecentQRCard({ id }: { id: string }) {
               <img
                 src={preview}
                 alt={record.name}
+                decoding="async"
+                loading="lazy"
                 className="size-12 rounded-lg border bg-white shrink-0"
               />
             ) : (
@@ -34,7 +33,7 @@ function RecentQRCard({ id }: { id: string }) {
                 <QrCode className="size-5 text-muted-foreground" />
               </div>
             )}
-            <div className="flex-1 min-w-0 text-left">
+            <div className="flex-1 min-w-0 text-start">
               <p className="text-sm font-medium text-foreground truncate">
                 {record.name}
               </p>
@@ -81,7 +80,7 @@ export function HomeRecentQRs() {
         </div>
         <div className="grid sm:grid-cols-3 gap-4">
           {recent.map((r) => (
-            <RecentQRCard key={r.id} id={r.id} />
+            <RecentQRCard key={r.id} record={r} />
           ))}
         </div>
       </div>

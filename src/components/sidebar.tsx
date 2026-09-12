@@ -29,7 +29,7 @@ export function Sidebar() {
   const { t } = useI18n();
 
   return (
-    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 border-r border-border bg-card">
+    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 border-s border-border bg-card">
       <div className="flex flex-col flex-1 min-h-0">
         <div className="flex items-center h-16 flex-shrink-0 px-6 border-b border-border">
           <Logo size="md" />
@@ -53,7 +53,7 @@ export function Sidebar() {
                   <item.icon className="size-5 flex-shrink-0" />
                   {t(item.labelKey)}
                   {item.href === "/create" && (
-                    <Badge variant="secondary" className="ml-auto text-[10px] px-1.5">
+                    <Badge variant="secondary" className="ms-auto text-[10px] px-1.5">
                       {t("common.new")}
                     </Badge>
                   )}

@@ -9,8 +9,17 @@ import type {
   TextValues,
 } from "../types";
 
+/**
+ * Strip CR/LF so a user-supplied value can never break a structured payload
+ * (vCard lines, WIFI: fields) by injecting extra records/fields. QR contents
+ * have no legitimate line breaks, so they are replaced with a space.
+ */
+function stripCRLF(str: string): string {
+  return str.replace(/[\r\n]+/g, " ");
+}
+
 function escapeWifiField(str: string): string {
-  return str
+  return stripCRLF(str)
     .replace(/\\/g, "\\\\")
     .replace(/"/g, '\\"')
     .replace(/;/g, "\\;")
@@ -19,7 +28,7 @@ function escapeWifiField(str: string): string {
 }
 
 function escapeVCard(str: string): string {
-  return str
+  return stripCRLF(str)
     .replace(/\\/g, "\\\\")
     .replace(/;/g, "\\;")
     .replace(/,/g, "\\,");
@@ -88,7 +97,7 @@ export function generateWiFiData(values: WiFiValues): string {
 }
 
 export function generateVCardData(values: VCardValues): string {
-  const fn = `${values.firstName} ${values.lastName}`.trim();
+  const fn = stripCRLF(`${values.firstName} ${values.lastName}`.trim());
   const n = `${escapeVCard(values.lastName)};${escapeVCard(values.firstName)};;;`;
   const lines = [
     "BEGIN:VCARD",
@@ -98,9 +107,9 @@ export function generateVCardData(values: VCardValues): string {
   ];
   if (values.organization) lines.push(`ORG:${escapeVCard(values.organization)}`);
   if (values.jobTitle) lines.push(`TITLE:${escapeVCard(values.jobTitle)}`);
-  if (values.phone) lines.push(`TEL:${values.phone}`);
-  if (values.email) lines.push(`EMAIL:${values.email}`);
-  if (values.website) lines.push(`URL:${values.website}`);
+  if (values.phone) lines.push(`TEL:${stripCRLF(values.phone)}`);
+  if (values.email) lines.push(`EMAIL:${stripCRLF(values.email)}`);
+  if (values.website) lines.push(`URL:${stripCRLF(values.website)}`);
   if (values.address || values.city || values.country) {
     const adr = `${escapeVCard(values.address)};${escapeVCard(values.city)};;;${escapeVCard(values.country)}`;
     lines.push(`ADR:${adr}`);

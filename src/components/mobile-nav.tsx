@@ -29,6 +29,7 @@ export function MobileNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                aria-label={t(item.labelKey)}
                 className="flex items-center justify-center -mt-5"
               >
                 <div className="flex items-center justify-center size-14 rounded-2xl bg-primary text-primary-shadow shadow-lg shadow-primary/25 transition-transform active:scale-95">

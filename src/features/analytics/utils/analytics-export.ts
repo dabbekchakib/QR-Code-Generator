@@ -1,13 +1,23 @@
 import type { ExportRow } from "../types";
 
+/**
+ * Metadata fields (QR name, device, browser...) are user/UA-controlled, so a
+ * hostile value could be interpreted as a spreadsheet formula when the CSV is
+ * opened in Excel/LibreOffice/Google Sheets (=, +, -, @, tab or CR prefix).
+ * Neutralize by prefixing with a single quote, which the major spreadsheet
+ * apps render as literal text.
+ */
+const DANGEROUS_CSV_PREFIX = /^[=+\-@\t\r]/;
+
 /** Escape one CSV field (RFC 4180): quote when it contains separators or line
  *  breaks, double inner quotes. Unicode (accents, Arabic) is preserved. */
 export function csvEscape(value: string): string {
   const s = String(value ?? "");
-  if (/[",\n\r]/.test(s)) {
-    return `"${s.replace(/"/g, '""')}"`;
+  const safe = DANGEROUS_CSV_PREFIX.test(s) ? `'${s}` : s;
+  if (/[",\n\r]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return s;
+  return safe;
 }
 
 /** Build a UTF-8 CSV body. Data values keep their exact text. */
