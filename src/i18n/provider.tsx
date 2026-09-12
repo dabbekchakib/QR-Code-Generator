@@ -13,7 +13,7 @@ import { getTranslation } from "./translations";
 interface I18nContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (path: string) => string;
+  t: (path: string, params?: Record<string, string | number>) => string;
   dir: "ltr" | "rtl";
   availableLocales: Locale[];
   localeNames: Record<Locale, string>;
@@ -40,7 +40,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (path: string) => getTranslation(locale, path),
+    (path: string, params?: Record<string, string | number>) => {
+      const value = getTranslation(locale, path);
+      if (!params) return value;
+      return value.replace(/\{(\w+)\}/g, (match, key) =>
+        key in params ? String(params[key]) : match
+      );
+    },
     [locale]
   );
 

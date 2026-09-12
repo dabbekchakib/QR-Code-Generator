@@ -20,6 +20,7 @@ import { useI18n } from "@/i18n/provider";
 import { formatUpdatedAt } from "@/features/qr/storage";
 import { useScanSummary } from "@/features/analytics/hooks/use-analytics";
 import { useOnlineStatus } from "@/hooks/use-online-status";
+import { QuickCreate } from "@/features/templates/components/quick-create";
 
 function RecentQRCard({ id }: { id: string }) {
   const { records } = useQRs();
@@ -169,6 +170,9 @@ export function DashboardContent() {
           </Card>
         ))}
       </div>
+
+      {/* Quick create from a template */}
+      <QuickCreate />
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Dynamic QR summary */}

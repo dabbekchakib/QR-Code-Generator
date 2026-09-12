@@ -6,7 +6,17 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 6 (Current)
+### Phase 7 (Current)
+- **Templates system** — 10 ready-made templates (Website, QR Menu, WhatsApp, Business Card, Contact, WiFi, Location, Event, Social Profile, Google Review) on `/templates`, with a gallery: live search, category chips, Recently Used, and local Favorites (indexed per device)
+- **Design presets** — 5 one-click QR styles (Classic, Midnight, Minimal, Soft, Bold) in the customizer, with a live contrast check that warns when the foreground/background pair falls below 3:1
+- **Template-driven creation** — `/create?template=<id>` prefills the wizard with the template's fields and its customization preset; dynamic templates (QR Menu, Google Review) pre-enable Dynamic mode with a permanent destination URL. Unknown template ids fall back to the normal create screen; `edit` mode always wins over the template param
+- **No engine duplication** — templates are a thin input layer: each template declares fields + a Zod schema + a payload mapper, and feeds the exact same QR engine, offline queue, and cloud sync as regular QRs (Static/Dynamic, favorites, backup, edit, duplicate all work identically)
+- **Non-invasive data** — saved QRs carry an optional `template_id` (`qr_codes.template_id`, migration 05) purely for the gallery/back-office; it is nullable so existing records, backups, and clouds rows are unaffected
+- **Fully local & free** — templates are built-in defaults; category/recent/favorite state lives in a private IndexedDB store (`qr-manager-template-prefs`). No locked/premium templates, no tracking, no server round-trips to load a template
+- **i18n** — all template names, descriptions, field labels, placeholders and design-preset labels are localized in FR, EN, AR (`t()` now supports `{param}` interpolation, e.g. the contrast ratio)
+- **Unit tests** — 44 new tests: registry lookups, per-template schema validation (incl. location URL-or-coordinates and event date/time refines), payload → `generateQRContent` round trips, presets contrast ≥ 3:1, and `template_id` round trips through backup and cloud mappers. Suite total: 214 tests, all green
+
+### Phase 6
 - **Scan tracking** — every hit on an active Dynamic QR (with a destination) records exactly **one scan** (`qr_scans`, migration 04): a phone camera scan, a click, even a page reload. Replayed requests equal replayed scans; this is documented in-app (`1 hit = 1 scan`)
 - **Privacy-first** — only three limited categories are stored per scan: **device type** (desktop/tablet/mobile/unknown), **operating system**, and **browser**. **No IP address, no raw User-Agent, no location, no cookies, no fingerprinting, no third-party trackers**
 - **Server-side recording** — the public route resolves the QR, validates it is a dynamic + active code with a safe destination, then records the scan through the `SECURITY DEFINER` function `record_qr_scan()` (which resolves the short code internally — it never accepts a client-supplied QR id). **Tracking failures can never block the visitor's redirect**
@@ -88,7 +98,6 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ### Upcoming Phases
 - QR Code logos & advanced styles (Rounded, Dots)
-- Templates system
 
 ## Tech Stack
 
@@ -137,6 +146,7 @@ src/
 │   └── online-indicator.tsx
 ├── features/               # Feature-specific modules
 │   ├── dashboard/
+│   ├── templates/           # template registry, schemas, data, presets, gallery UI, prefs store
 │   └── qr/
 │       ├── components/      # QRType cards, forms, preview, customizer, download
 │       │   ├── forms/       # URL, WiFi, Phone, Email, WhatsApp, vCard, Text forms
@@ -220,7 +230,7 @@ npm install
    NEXT_PUBLIC_APP_URL=http://localhost:3000  # your public origin (permanent QR link)
    ```
 
-3. Apply the migrations in `supabase/migrations/` (creates `profiles` and `qr_codes` tables with row-level security; migration 03 adds the dynamic QR fields and the `resolve_dynamic_qr` resolver function).
+3. Apply the migrations in `supabase/migrations/` (creates `profiles` and `qr_codes` tables with row-level security; migration 03 adds the dynamic QR fields and the `resolve_dynamic_qr` resolver function; migration 05 adds the optional `template_id` column).
 
 Without this config the app still works fully locally, in anonymous mode.
 
@@ -276,6 +286,25 @@ Click **Save QR** to name and store it locally, or open an existing code for edi
 - **First sign-in** — choose to push the current local codes to your account, keep them local only, or cancel.
 - **Sync** — when online and signed in, every change is written to your account instantly; offline changes are queued and replayed on reconnect. Pending count is shown in the header.
 - **Signed out** — everything stays in IndexedDB on this device; data is never deleted.
+
+### Templates
+
+- **Gallery** (`/templates`) — browse all 10 templates, search by name/description, filter by category, favorite templates (pinned row at the top), and pick up from Recently Used. The gallery is also reachable from the homepage ("Popular Templates") and the dashboard ("Quick create").
+- **Create from a template** — `/create?template=<id>` (or the "Use" button on a card) loads the template fields into the wizard. Dynamic templates (QR Menu, Google Review) start in Dynamic mode and show a permanent URL box. Every template ships with a design preset that is applied to the preview automatically.
+- **Design presets** — in the customizer, pick Classic, Midnight, Minimal, Soft or Bold. The preview keeps your size/margin; a live contrast check flags any combination below 3:1 contrast.
+- QRs created from a template behave exactly like normal codes: Static/Dynamic, favorites, export/import, edit, duplicate, and cloud sync all work. The originating template id (if any) is stored as `template_id` for your reference.
+
+### Adding a new template
+
+Templates are declarative — no changes to the QR engine, sync, or create wizard are required:
+
+1. **Define the data** — add include an entry in `src/features/templates/data/` (a new file modeled on the existing ones, e.g. `website.ts`), exporting a `TemplateDefinition` with a unique `id`, `qrType`, `nameKey`/`descriptionKey`, `fields`, `defaultValues`, `defaultMode`, optional `dynamicField`, `category`, `defaultName`, `presetId`, `computeName`, `schema`, and `toPayload`. Wire it up in `data/index.ts` (and optionally add its id to `POPULAR_TEMPLATE_IDS` / `QUICK_CREATE_TEMPLATE_IDS`).
+2. **Add a Zod schema** — extend `src/features/templates/schemas/index.ts` with a schema shaped like `TemplateValues` (name + the template's fields) so the form validates the same way as the core QR types.
+3. **Localize it** — add `name`, `description`, `fields`, `placeholders` and `helper` keys under the `templates` namespace in `src/i18n/translations.ts` for **all three** locales (fr, en, ar). Design-preset labels live under the `design` namespace.
+4. **Register a badge** — template cards derive category badges from `templates.categories.<category>`; add the category to `TEMPLATE_CATEGORIES` only if it is genuinely new to the gallery.
+5. **Test** — add a payload round-trip test in `src/features/templates/__tests__/payloads.test.ts` proving the template's schema → `toPayload` → `generateQRContent` produces the expected content.
+
+That's it — the gallery renders it, the wizard prefills it, and saving behaves like any other QR.
 
 ### Managing QR Codes
 

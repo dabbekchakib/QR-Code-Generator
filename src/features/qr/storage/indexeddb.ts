@@ -23,6 +23,7 @@ export class IndexedDBQRRepository implements QRRepository {
       shortCode: input.shortCode,
       destinationUrl: input.destinationUrl,
       status: input.status,
+      templateId: input.templateId,
     });
     await db.add(DB_STORE, record);
     return record;

@@ -20,6 +20,7 @@ const rowBase = z.object({
   short_code: z.string().min(1).nullable().optional(),
   destination_url: z.string().min(1).nullable().optional(),
   status: z.enum(["active", "disabled"]).optional(),
+  template_id: z.string().min(1).nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });

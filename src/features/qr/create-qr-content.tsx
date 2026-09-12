@@ -22,13 +22,18 @@ import {
 } from "./types";
 import { urlSchema, wifiSchema, phoneSchema, emailSchema, whatsappSchema, vcardSchema, textSchema } from "./schemas";
 import { cn } from "@/lib/utils";
-import { RotateCcw, Settings2, QrCode, Shield, Save, Lock, Globe } from "lucide-react";
+import { RotateCcw, Settings2, QrCode, Shield, Save, Lock, Globe, LayoutTemplate } from "lucide-react";
+import Link from "next/link";
 import { useI18n } from "@/i18n/provider";
 import { useToast } from "@/lib/toast-store";
 import { qrService } from "./service/qr-service";
 import type { QRCodeRecord } from "./storage";
 import { getDefaultName } from "./storage";
 import { generateShortCode, isSafeDestination, getDynamicQRUrlWithFallback, DynamicQRError } from "./dynamic";
+import { getTemplateById } from "@/features/templates/registry";
+import { getPresetById, presetCustomization } from "@/features/templates/presets";
+import { TemplateForm } from "@/features/templates/components/template-form";
+import type { TemplateValues } from "@/features/templates/types";
 import {
   Dialog,
   DialogContent,
@@ -74,12 +79,23 @@ export function CreateQRContent() {
   const typeParam = searchParams.get("type") as QRType | null;
   const editParam = searchParams.get("edit");
   const isEditing = !!editParam;
+  const templateParam = searchParams.get("template");
   const initialType = typeParam && VALID_TYPES.includes(typeParam) ? typeParam : null;
+
+  // Templates are a thin input layer: metadata + values drive the same engine
+  // and the same save pipeline. Editing always wins over a template param so
+  // templates can never overwrite an existing record. Unknown template ids fall
+  // back to a normal QR (no error, per spec).
+  const activeTemplate = useMemo(() => {
+    if (isEditing || !templateParam) return null;
+    return getTemplateById(templateParam);
+  }, [templateParam, isEditing]);
 
   const [selectedType, setSelectedType] = useState<QRType | null>(initialType);
   const [values, setValues] = useState<AnyFormValues>(() =>
     selectedType ? getDefaultValues(selectedType) : getDefaultValues("website")
   );
+  const [templateValues, setTemplateValues] = useState<TemplateValues>({});
   const [customization, setCustomization] = useState<QRCustomization>(DEFAULT_CUSTOMIZATION);
 
   const [editedRecord, setEditedRecord] = useState<QRCodeRecord | null>(null);
@@ -97,13 +113,14 @@ export function CreateQRContent() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
   const handleModeSelect = useCallback((mode: "static" | "dynamic") => {
+    if (activeTemplate) return;
     setShareMode(mode);
     setDestinationError(null);
     if (mode === "dynamic") {
       setSelectedType("website");
       setCustomization(DEFAULT_CUSTOMIZATION);
     }
-  }, []);
+  }, [activeTemplate]);
 
   const handleTypeSelect = useCallback((type: QRType) => {
     setSelectedType(type);
@@ -118,7 +135,34 @@ export function CreateQRContent() {
   const destinationValid = isDynamicMode && destination.trim() !== "" && isSafeDestination(destination);
   const permanentUrl = isDynamicMode ? getDynamicQRUrlWithFallback(draftShortCode) : "";
 
+  const templateDestination = isDynamicMode
+    ? String(templateValues[activeTemplate?.dynamicField ?? "url"] ?? "").trim()
+    : "";
+  const templateDestinationValid =
+    isDynamicMode && activeTemplate !== null && isSafeDestination(templateDestination);
+
+  const { templateErrors, templateContent } = useMemo(() => {
+    if (!activeTemplate) return { templateErrors: {} as Record<string, string>, templateContent: "" };
+    const result = activeTemplate.schema.safeParse(templateValues);
+    if (!result.success) return { templateErrors: mapZodErrors(result.error), templateContent: "" };
+    if (isDynamicMode) {
+      if (!templateDestinationValid) return { templateErrors: {} as Record<string, string>, templateContent: "" };
+      return { templateErrors: {} as Record<string, string>, templateContent: permanentUrl };
+    }
+    try {
+      return {
+        templateErrors: {} as Record<string, string>,
+        templateContent: generateQRContent(activeTemplate.qrType, activeTemplate.toPayload(result.data)),
+      };
+    } catch {
+      return { templateErrors: {} as Record<string, string>, templateContent: "" };
+    }
+  }, [activeTemplate, templateValues, isDynamicMode, templateDestinationValid, permanentUrl]);
+
   const { qrContent, errors } = useMemo(() => {
+    if (activeTemplate) {
+      return { qrContent: templateContent, errors: templateErrors };
+    }
     if (isDynamicMode) {
       if (!destinationValid) return { qrContent: "", errors: {} as Record<string, string> };
       return { qrContent: permanentUrl, errors: {} as Record<string, string> };
@@ -134,17 +178,30 @@ export function CreateQRContent() {
     } catch {
       return { qrContent: "", errors: {} };
     }
-  }, [isDynamicMode, destinationValid, permanentUrl, selectedType, values]);
+  }, [activeTemplate, templateContent, templateErrors, isDynamicMode, destinationValid, permanentUrl, selectedType, values]);
+
+  const templateInitialCustomization = useMemo(
+    () =>
+      activeTemplate
+        ? presetCustomization(getPresetById(activeTemplate.presetId), {
+            size: DEFAULT_CUSTOMIZATION.size,
+            margin: DEFAULT_CUSTOMIZATION.margin,
+          })
+        : null,
+    [activeTemplate]
+  );
 
   const handleReset = useCallback(() => {
-    if (isDynamicMode) {
+    if (activeTemplate) {
+      setTemplateValues({ ...activeTemplate.defaultValues });
+    } else if (isDynamicMode) {
       setDestination("");
       setDestinationError(null);
     } else if (selectedType) {
       setValues(getDefaultValues(selectedType));
     }
-    setCustomization(DEFAULT_CUSTOMIZATION);
-  }, [isDynamicMode, selectedType]);
+    setCustomization(templateInitialCustomization ?? DEFAULT_CUSTOMIZATION);
+  }, [activeTemplate, templateInitialCustomization, isDynamicMode, selectedType]);
 
   useEffect(() => {
     if (!editParam || loadedRef.current) return;
@@ -170,10 +227,36 @@ export function CreateQRContent() {
     };
   }, [editParam]);
 
-  const canSave = isDynamicMode ? destinationValid : !!qrContent;
+  // Seed the create form from a template (defaults + default mode + its preset
+  // design). Runs once per active template id.
+  useEffect(() => {
+    if (!activeTemplate || loadedRef.current) return;
+    loadedRef.current = true;
+    setSelectedType(activeTemplate.qrType);
+    setShareMode(activeTemplate.defaultMode);
+    setTemplateValues({ ...activeTemplate.defaultValues });
+    setCustomization(
+      presetCustomization(getPresetById(activeTemplate.presetId), {
+        size: DEFAULT_CUSTOMIZATION.size,
+        margin: DEFAULT_CUSTOMIZATION.margin,
+      })
+    );
+  }, [activeTemplate]);
+
+  const canSave = activeTemplate ? !!qrContent : isDynamicMode ? destinationValid : !!qrContent;
 
   const openSaveDialog = () => {
-    setRecordName(editedRecord?.name ?? getDefaultName(selectedType ?? "website"));
+    let suggestedName: string | null = null;
+    if (activeTemplate) {
+      const explicit = String(templateValues.name ?? "").trim();
+      suggestedName =
+        explicit ||
+        activeTemplate.computeName?.(templateValues) ||
+        t(activeTemplate.nameKey);
+    }
+    setRecordName(
+      editedRecord?.name ?? suggestedName ?? getDefaultName(selectedType ?? "website")
+    );
     setNameError(null);
     setShowSaveDialog(true);
   };
@@ -184,12 +267,12 @@ export function CreateQRContent() {
       setNameError(t("create.nameRequired"));
       return;
     }
-    if (isDynamicMode && !destinationValid) {
+    if (isDynamicMode && !destinationValid && !templateDestinationValid) {
       setDestinationError(t("dynamicQr.errInvalidDestination"));
       setShowSaveDialog(false);
       return;
     }
-    if (!selectedType) return;
+    if (!selectedType && !activeTemplate) return;
     setSaveState("saving");
     setNameError(null);
     setDestinationError(null);
@@ -209,7 +292,7 @@ export function CreateQRContent() {
           const updated: QRCodeRecord = {
             ...editedRecord,
             name,
-            type: selectedType,
+            type: selectedType ?? editedRecord.type,
             values,
             customization,
             isDynamic: false,
@@ -221,6 +304,38 @@ export function CreateQRContent() {
         setSaveState("saved");
         setShowSaveDialog(false);
         router.push(`/qrs/${editedRecord.id}`);
+      } else if (activeTemplate) {
+        const parsed = activeTemplate.schema.safeParse(templateValues);
+        if (!parsed.success) {
+          setSaveState("error");
+          return;
+        }
+        if (isDynamicMode) {
+          const created = await qrService.createDynamic({
+            name,
+            destinationUrl: templateDestination,
+            customization,
+            preferredShortCode: draftShortCode,
+            templateId: activeTemplate.id,
+          });
+          showToast({ title: t("create.saved"), variant: "success" });
+          setSaveState("saved");
+          setShowSaveDialog(false);
+          router.push(`/qrs/${created.id}`);
+        } else {
+          const created = await qrService.create({
+            name,
+            type: activeTemplate.qrType,
+            values: activeTemplate.toPayload(parsed.data),
+            customization,
+            isDynamic: false,
+            templateId: activeTemplate.id,
+          });
+          showToast({ title: t("create.saved"), variant: "success" });
+          setSaveState("saved");
+          setShowSaveDialog(false);
+          router.push(`/qrs/${created.id}`);
+        }
       } else if (isDynamicMode) {
         const created = await qrService.createDynamic({
           name,
@@ -235,7 +350,7 @@ export function CreateQRContent() {
       } else {
         const created = await qrService.create({
           name,
-          type: selectedType,
+          type: selectedType ?? "website",
           values,
           customization,
           isDynamic: false,
@@ -287,62 +402,89 @@ export function CreateQRContent() {
         <CardContent>
           {!isEditing && (
             <div className="mb-4">
-              <div className="inline-flex rounded-lg border border-border p-0.5" role="tablist" aria-label={t("create.shareType")}>
-                <button
-                  role="tab"
-                  aria-selected={!isDynamicMode}
-                  onClick={() => handleModeSelect("static")}
-                  className={cn(
-                    "px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2",
-                    !isDynamicMode
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {t("create.staticOption")}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={isDynamicMode}
-                  onClick={() => handleModeSelect("dynamic")}
-                  className={cn(
-                    "px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2",
-                    isDynamicMode
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {t("create.dynamicOption")}
-                </button>
-              </div>
+              {!activeTemplate ? (
+                <div className="inline-flex rounded-lg border border-border p-0.5" role="tablist" aria-label={t("create.shareType")}>
+                  <button
+                    role="tab"
+                    aria-selected={!isDynamicMode}
+                    onClick={() => handleModeSelect("static")}
+                    className={cn(
+                      "px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2",
+                      !isDynamicMode
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {t("create.staticOption")}
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={isDynamicMode}
+                    onClick={() => handleModeSelect("dynamic")}
+                    className={cn(
+                      "px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2",
+                      isDynamicMode
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {t("create.dynamicOption")}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 p-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="size-10 shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <activeTemplate.icon className="size-5" aria-hidden />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">{t("create.usingTemplate")}</p>
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {t(activeTemplate.nameKey)}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    render={<Link href="/templates" />}
+                    nativeButton={false}
+                  >
+                    <LayoutTemplate className="size-3.5" />
+                    {t("create.changeTemplate")}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
           {isDynamicMode && (
             <div className="mb-4 space-y-3 rounded-xl border border-border bg-muted/30 p-4">
-              <div className="space-y-1.5">
-                <label htmlFor="dynamic-destination" className="text-sm font-medium">
-                  {t("create.destinationLabel")} <span className="text-destructive">*</span>
-                </label>
-                <Input
-                  id="dynamic-destination"
-                  type="url"
-                  inputMode="url"
-                  value={destination}
-                  onChange={(e) => {
-                    setDestination(e.target.value);
-                    setDestinationError(null);
-                  }}
-                  placeholder={t("create.destinationPlaceholder")}
-                  aria-invalid={!!destinationError}
-                  aria-describedby={destinationError ? "dynamic-destination-error" : undefined}
-                />
-                {destinationError && (
-                  <p id="dynamic-destination-error" className="text-xs text-destructive" role="alert">
-                    {destinationError}
-                  </p>
-                )}
-              </div>
+              {!activeTemplate && (
+                <div className="space-y-1.5">
+                  <label htmlFor="dynamic-destination" className="text-sm font-medium">
+                    {t("create.destinationLabel")} <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    id="dynamic-destination"
+                    type="url"
+                    inputMode="url"
+                    value={destination}
+                    onChange={(e) => {
+                      setDestination(e.target.value);
+                      setDestinationError(null);
+                    }}
+                    placeholder={t("create.destinationPlaceholder")}
+                    aria-invalid={!!destinationError}
+                    aria-describedby={destinationError ? "dynamic-destination-error" : undefined}
+                  />
+                  {destinationError && (
+                    <p id="dynamic-destination-error" className="text-xs text-destructive" role="alert">
+                      {destinationError}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-start gap-2 rounded-lg bg-card border border-border p-3">
                 <Globe className="size-4 text-muted-foreground mt-0.5 shrink-0" />
@@ -354,8 +496,21 @@ export function CreateQRContent() {
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">{t("create.permanentUrlDesc")}</p>
+              {!activeTemplate && (
+                <p className="text-xs text-muted-foreground">{t("create.permanentUrlDesc")}</p>
+              )}
               <p className="text-xs text-muted-foreground">{t("create.dynamicBenefit")}</p>
+              {activeTemplate && (
+                <p className="text-xs text-muted-foreground">
+                  {t("create.templateDestinationNote", {
+                    field: t(
+                      activeTemplate.fields.find(
+                        (f) => f.key === activeTemplate.dynamicField
+                      )?.labelKey ?? "templates.fields.url"
+                    ),
+                  })}
+                </p>
+              )}
             </div>
           )}
 
@@ -406,7 +561,7 @@ export function CreateQRContent() {
       </Card>
 
       {/* Form + Preview */}
-      {selectedType && (
+      {(selectedType || activeTemplate) && (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Left: Form */}
           <div className="lg:col-span-3 space-y-6">
@@ -421,12 +576,21 @@ export function CreateQRContent() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <QRForm
-                    type={selectedType}
-                    values={values}
-                    onChange={handleValuesChange}
-                    errors={errors}
-                  />
+                  {activeTemplate ? (
+                    <TemplateForm
+                      template={activeTemplate}
+                      values={templateValues}
+                      onChange={setTemplateValues}
+                      errors={errors}
+                    />
+                  ) : (
+                    <QRForm
+                      type={selectedType ?? "website"}
+                      values={values}
+                      onChange={handleValuesChange}
+                      errors={errors}
+                    />
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -461,10 +625,10 @@ export function CreateQRContent() {
                     <>
                       <Separator />
 
-                      <QRDownloadButtons content={qrContent} type={selectedType} customization={customization} />
+                      <QRDownloadButtons content={qrContent} type={selectedType ?? activeTemplate?.qrType ?? "website"} customization={customization} />
 
                       <div className="flex flex-wrap items-center gap-2">
-                        <QRContentActions type={selectedType} content={qrContent} />
+                        <QRContentActions type={selectedType ?? activeTemplate?.qrType ?? "website"} content={qrContent} />
                         <Button variant="ghost" size="sm" onClick={handleReset} aria-label={t("create.resetForm")}>
                           <RotateCcw className="size-4" />
                           {t("create.resetForm")}

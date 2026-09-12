@@ -52,6 +52,7 @@ function toCloudRow(record: QRCodeRecord): CloudQRRow {
     short_code: record.shortCode ?? null,
     destination_url: record.destinationUrl ?? null,
     status: record.status,
+    template_id: record.templateId ?? null,
     created_at: record.createdAt,
     updated_at: record.updatedAt,
   };
@@ -102,6 +103,7 @@ async function processSingleOp(op: SyncOperation) {
         shortCode: row.short_code,
         destinationUrl: row.destination_url,
         status: row.status,
+        templateId: row.template_id,
         updatedAt: row.updated_at,
       });
     } else {
@@ -116,6 +118,7 @@ async function processSingleOp(op: SyncOperation) {
         shortCode: row.short_code,
         destinationUrl: row.destination_url,
         status: row.status,
+        templateId: row.template_id,
       });
     }
   } else if (op.operation === "UPDATE" && op.payload) {
@@ -133,6 +136,7 @@ async function processSingleOp(op: SyncOperation) {
         shortCode: row.short_code,
         destinationUrl: row.destination_url,
         status: row.status,
+        templateId: row.template_id,
         updatedAt: row.updated_at,
       });
     }
@@ -258,6 +262,7 @@ async function pushLocalToCloud(
           shortCode: record.shortCode,
           destinationUrl: record.destinationUrl,
           status: record.status,
+          templateId: record.templateId,
         });
         pushed++;
       } catch {
@@ -298,6 +303,7 @@ async function createDynamic(
     customization: QRCodeRecord["customization"];
     favorite?: boolean;
     preferredShortCode?: string;
+    templateId?: string | null;
   }
 ): Promise<QRCodeRecord> {
   const destination = validateDynamicDestination(input.destinationUrl);
@@ -317,6 +323,7 @@ async function createDynamic(
       shortCode,
       destinationUrl: destination,
       status: "active",
+      templateId: input.templateId ?? null,
     };
 
     try {

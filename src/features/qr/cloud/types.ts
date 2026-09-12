@@ -14,6 +14,7 @@ export interface CloudQRRow {
   short_code: string | null;
   destination_url: string | null;
   status: QRStatus;
+  template_id: string | null;
   created_at: string;
   updated_at: string;
 }

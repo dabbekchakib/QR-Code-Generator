@@ -1,28 +1,40 @@
 "use client";
 
-import {
-  type QRCustomization,
-  type ErrorCorrectionLevel,
-  type QRStyle,
-  DEFAULT_CUSTOMIZATION,
-  SIZE_OPTIONS,
-  ERROR_CORRECTION_INFO,
+import type {
+  QRCustomization,
+  ErrorCorrectionLevel,
+  QRStyle,
 } from "../types";
+import { DEFAULT_CUSTOMIZATION, SIZE_OPTIONS } from "../types";
+import { useI18n } from "@/i18n/provider";
+import { QR_DESIGN_PRESETS } from "@/features/templates/presets";
+import { presetCustomization } from "@/features/templates/presets";
+import { validateQRContrast } from "@/features/templates/utils/contrast";
+import { cn } from "@/lib/utils";
 
 interface QRCustomizerProps {
   customization: QRCustomization;
   onChange: (customization: QRCustomization) => void;
 }
 
-const STYLE_OPTIONS: { value: QRStyle; label: string; available: boolean }[] = [
-  { value: "square", label: "Square", available: true },
-  { value: "rounded", label: "Rounded", available: false },
-  { value: "dots", label: "Dots", available: false },
+const STYLE_OPTIONS: { value: QRStyle; labelKey: string; available: boolean }[] = [
+  { value: "square", labelKey: "design.styleSquare", available: true },
+  { value: "rounded", labelKey: "design.styleRounded", available: false },
+  { value: "dots", labelKey: "design.styleDots", available: false },
 ];
 
 const MARGIN_OPTIONS = [0, 1, 2, 4, 6, 8] as const;
 
+const ERROR_INFO = {
+  L: "design.errL",
+  M: "design.errM",
+  Q: "design.errQ",
+  H: "design.errH",
+} as const;
+
 export function QRCustomizer({ customization, onChange }: QRCustomizerProps) {
+  const { t } = useI18n();
+
   const update = <K extends keyof QRCustomization>(
     key: K,
     value: QRCustomization[K]
@@ -30,22 +42,87 @@ export function QRCustomizer({ customization, onChange }: QRCustomizerProps) {
     onChange({ ...customization, [key]: value });
   };
 
+  const contrast = validateQRContrast(
+    customization.foreground,
+    customization.background
+  );
+
+  const isPresetActive = (preset: (typeof QR_DESIGN_PRESETS)[number]) => {
+    return (
+      preset.foreground === customization.foreground &&
+      preset.background === customization.background &&
+      preset.errorCorrection === customization.errorCorrection &&
+      preset.style === customization.style
+    );
+  };
+
+  const chip = (active: boolean, disabled?: boolean) =>
+    cn(
+      "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
+      active
+        ? "border-primary bg-primary/10 text-primary"
+        : "border-border hover:border-primary/30",
+      disabled && "opacity-50 cursor-not-allowed"
+    );
+
   return (
     <div className="space-y-5">
+      {/* Design presets */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">{t("design.presets")}</label>
+        <div className="flex flex-wrap gap-2">
+          {QR_DESIGN_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              aria-pressed={isPresetActive(preset)}
+              onClick={() =>
+                onChange(
+                  presetCustomization(preset, {
+                    size: customization.size,
+                    margin: customization.margin,
+                  })
+                )
+              }
+              className={chip(isPresetActive(preset))}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className="inline-flex h-3.5 w-3.5 rounded-sm border border-border"
+                  style={{
+                    background:
+                      preset.foreground === preset.background
+                        ? preset.background
+                        : `linear-gradient(135deg, ${preset.foreground} 50%, ${preset.background} 50%)`,
+                  }}
+                />
+                {t(`templates.presets.${preset.id}`)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Contrast warning */}
+      {!contrast.sufficient && (
+        <p className="rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400" role="alert">
+          {t("design.contrastWarning", {
+            ratio: contrast.ratio.toFixed(2),
+          })}
+        </p>
+      )}
+
       {/* Size */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">Size</label>
+        <label className="text-sm font-medium">{t("design.size")}</label>
         <div className="flex flex-wrap gap-2">
           {SIZE_OPTIONS.map((size) => (
             <button
               key={size}
               type="button"
               onClick={() => update("size", size)}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                customization.size === size
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border hover:border-primary/30"
-              }`}
+              className={chip(customization.size === size)}
             >
               {size}px
             </button>
@@ -55,18 +132,14 @@ export function QRCustomizer({ customization, onChange }: QRCustomizerProps) {
 
       {/* Margin */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">Margin</label>
+        <label className="text-sm font-medium">{t("design.margin")}</label>
         <div className="flex flex-wrap gap-2">
           {MARGIN_OPTIONS.map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => update("margin", m)}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                customization.margin === m
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border hover:border-primary/30"
-              }`}
+              className={chip(customization.margin === m)}
             >
               {m}
             </button>
@@ -78,7 +151,7 @@ export function QRCustomizer({ customization, onChange }: QRCustomizerProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <label htmlFor="qr-fg" className="text-sm font-medium">
-            Foreground
+            {t("design.foreground")}
           </label>
           <div className="flex items-center gap-2">
             <input
@@ -95,7 +168,7 @@ export function QRCustomizer({ customization, onChange }: QRCustomizerProps) {
         </div>
         <div className="space-y-2">
           <label htmlFor="qr-bg" className="text-sm font-medium">
-            Background
+            {t("design.background")}
           </label>
           <div className="flex items-center gap-2">
             <input
@@ -114,31 +187,27 @@ export function QRCustomizer({ customization, onChange }: QRCustomizerProps) {
 
       {/* Error Correction */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">Error Correction</label>
+        <label className="text-sm font-medium">{t("design.errorCorrection")}</label>
         <div className="flex flex-wrap gap-2">
           {(["L", "M", "Q", "H"] as ErrorCorrectionLevel[]).map((level) => (
             <button
               key={level}
               type="button"
               onClick={() => update("errorCorrection", level)}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                customization.errorCorrection === level
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border hover:border-primary/30"
-              }`}
+              className={chip(customization.errorCorrection === level)}
             >
               {level}
             </button>
           ))}
         </div>
         <p className="text-xs text-muted-foreground">
-          {ERROR_CORRECTION_INFO[customization.errorCorrection]}
+          {t(ERROR_INFO[customization.errorCorrection])}
         </p>
       </div>
 
       {/* Style */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">Style</label>
+        <label className="text-sm font-medium">{t("design.style")}</label>
         <div className="flex flex-wrap gap-2">
           {STYLE_OPTIONS.map((style) => (
             <button
@@ -146,19 +215,11 @@ export function QRCustomizer({ customization, onChange }: QRCustomizerProps) {
               type="button"
               disabled={!style.available}
               onClick={() => style.available && update("style", style.value)}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                customization.style === style.value
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border hover:border-primary/30"
-              } ${!style.available ? "opacity-50 cursor-not-allowed" : ""}`}
-              title={
-                !style.available
-                  ? "Coming in a future update"
-                  : undefined
-              }
+              className={chip(customization.style === style.value, !style.available)}
+              title={!style.available ? t("design.comingSoon") : undefined}
             >
-              {style.label}
-              {!style.available && " (soon)"}
+              {t(style.labelKey)}
+              {!style.available && ` (${t("design.soon")})`}
             </button>
           ))}
         </div>
@@ -170,7 +231,7 @@ export function QRCustomizer({ customization, onChange }: QRCustomizerProps) {
         onClick={() => onChange({ ...DEFAULT_CUSTOMIZATION })}
         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
-        Reset customization
+        {t("design.reset")}
       </button>
     </div>
   );

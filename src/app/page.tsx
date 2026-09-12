@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 import { HomeRecentQRs } from "@/features/home/home-recent-qrs";
+import { PopularTemplates } from "@/features/templates/components/popular-templates";
 
 const qrTypes = [
   { icon: Globe, name: "Website", desc: "Link to any website", color: "text-blue-500" },
@@ -169,6 +170,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Popular Templates */}
+      <PopularTemplates />
 
       {/* Recent QR Codes */}
       <HomeRecentQRs />

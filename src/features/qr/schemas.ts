@@ -54,7 +54,7 @@ export const whatsappSchema = z.object({
 
 export const vcardSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  lastName: z.string().default(""),
   organization: z.string().default(""),
   jobTitle: z.string().default(""),
   phone: z.string().default(""),

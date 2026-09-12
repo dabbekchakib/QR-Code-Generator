@@ -20,6 +20,7 @@ export function normalizeCloudRow(parsed: CloudQRRowParsed): CloudQRRow {
     short_code: parsed.short_code ?? null,
     destination_url: parsed.destination_url ?? null,
     status: parsed.status ?? "active",
+    template_id: parsed.template_id ?? null,
   } as CloudQRRow;
 }
 
@@ -35,6 +36,7 @@ export function cloudRowToLocalRecord(row: CloudQRRow): QRCodeRecord {
     shortCode: row.short_code ?? null,
     destinationUrl: row.destination_url ?? null,
     status: row.status ?? "active",
+    templateId: row.template_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -59,6 +61,7 @@ export function localRecordToCloudRow(
       short_code: record.shortCode ?? null,
       destination_url: record.destinationUrl ?? null,
       status: record.status ?? "active",
+      template_id: record.templateId ?? null,
       created_at: hasTimestamps ? (record as QRCodeRecord).createdAt : now,
       updated_at: hasTimestamps ? (record as QRCodeRecord).updatedAt : now,
     })

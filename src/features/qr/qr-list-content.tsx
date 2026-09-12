@@ -101,6 +101,7 @@ export function QRListContent() {
           shortCode: parsed.shortCode ?? null,
           destinationUrl: parsed.destinationUrl ?? null,
           status: parsed.status ?? "active",
+          templateId: parsed.templateId ?? null,
         });
         count++;
       }

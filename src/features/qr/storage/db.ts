@@ -61,6 +61,7 @@ export function createRecord(input: {
   shortCode?: string | null;
   destinationUrl?: string | null;
   status?: QRCodeRecord["status"];
+  templateId?: string | null;
 }): QRCodeRecord {
   const now = new Date().toISOString();
   return {
@@ -74,6 +75,7 @@ export function createRecord(input: {
     shortCode: input.shortCode ?? null,
     destinationUrl: input.destinationUrl ?? null,
     status: input.status ?? "active",
+    templateId: input.templateId ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -81,8 +83,9 @@ export function createRecord(input: {
 
 /**
  * Make a value read from IndexedDB safe: records written before Phase 5 have
- * no shortCode/destinationUrl/status fields. Normalizing on read lets the rest
- * of the app ignore that they ever existed.
+ * no shortCode/destinationUrl/status fields, and records before Phase 7 have
+ * no templateId. Normalizing on read lets the rest of the app ignore that they
+ * ever existed.
  */
 export function normalizeRecord(record: QRCodeRecord): QRCodeRecord {
   return {
@@ -90,5 +93,6 @@ export function normalizeRecord(record: QRCodeRecord): QRCodeRecord {
     shortCode: record.shortCode ?? null,
     destinationUrl: record.destinationUrl ?? null,
     status: record.status ?? "active",
+    templateId: record.templateId ?? null,
   };
 }

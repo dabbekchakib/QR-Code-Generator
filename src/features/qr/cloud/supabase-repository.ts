@@ -66,6 +66,7 @@ export class SupabaseQRRepository
         short_code: record.shortCode ?? null,
         destination_url: record.destinationUrl ?? null,
         status: record.status,
+        template_id: record.templateId ?? null,
       } as never)
       .eq("id", record.id)
       .select("*")

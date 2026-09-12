@@ -20,6 +20,8 @@ export interface QRCodeRecord {
   destinationUrl?: string | null;
   /** "active" | "disabled". Old local records without it are treated as active. */
   status: QRStatus;
+  /** Which template created this record (Phase 7). null = created from scratch. */
+  templateId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +37,7 @@ export interface CreateQRCodeRecord {
   shortCode?: string | null;
   destinationUrl?: string | null;
   status?: QRStatus;
+  templateId?: string | null;
 }
 
 export interface QRRepository {

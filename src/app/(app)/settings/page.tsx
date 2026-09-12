@@ -93,6 +93,10 @@ export default function SettingsPage() {
           customization: parsed.customization,
           isDynamic: parsed.isDynamic,
           favorite: parsed.favorite,
+          shortCode: parsed.shortCode ?? null,
+          destinationUrl: parsed.destinationUrl ?? null,
+          status: parsed.status ?? "active",
+          templateId: parsed.templateId ?? null,
         });
         count++;
       }

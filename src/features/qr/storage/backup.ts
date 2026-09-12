@@ -28,6 +28,7 @@ const recordBase = z.object({
   shortCode: z.string().min(1).nullable().optional(),
   destinationUrl: z.string().min(1).nullable().optional(),
   status: z.enum(["active", "disabled"]).optional(),
+  templateId: z.string().min(1).nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -84,6 +85,7 @@ export function recordFromBackup(record: QRRecordInput): QRCodeRecord {
     shortCode: record.shortCode ?? null,
     destinationUrl: record.destinationUrl ?? null,
     status: record.status ?? "active",
+    templateId: record.templateId ?? null,
   };
 }
 

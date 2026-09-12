@@ -34,6 +34,7 @@ async function applyOperation(
         short_code: payload.short_code,
         destination_url: payload.destination_url,
         status: payload.status,
+        template_id: payload.template_id,
       } as never)
       .eq("id", op.recordId)
       .eq("user_id", userId)
@@ -59,6 +60,7 @@ async function applyOperation(
           short_code: payload.short_code,
           destination_url: payload.destination_url,
           status: payload.status,
+          template_id: payload.template_id,
           created_at: payload.created_at,
           updated_at: payload.updated_at,
         } as never,
