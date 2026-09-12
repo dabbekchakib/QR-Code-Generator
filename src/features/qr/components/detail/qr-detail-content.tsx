@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ImageIcon, FileCode, Copy, Check, Pencil, CopyPlus, Trash2, Star, Share2, Shield, Link2, Power, CloudOff, Palette } from "lucide-react";
+import { ArrowLeft, Copy, Check, Pencil, CopyPlus, Trash2, Star, Shield, Link2, Power, CloudOff, Palette, ExternalLink, WifiOff, Clock, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,16 +12,17 @@ import { Input } from "@/components/ui/input";
 import { qrService } from "@/features/qr/service/qr-service";
 import type { QRCodeRecord, QRStatus } from "@/features/qr/storage";
 import { useQRContent, useQRPreviewDataUrl, useQRTypeName } from "@/features/qr/hooks/use-qr-preview";
-import { downloadPNG, downloadSVG } from "@/features/qr/lib/qr-download";
-import { shareQRCode } from "@/features/qr/lib/qr-share";
 import { copyToClipboard } from "@/features/qr/lib/qr-clipboard";
 import { getCopyLabel } from "@/features/qr/lib/qr-generator";
 import { duplicateRecord } from "@/features/qr/storage/utils";
-import { useSyncStore } from "@/features/qr/sync/sync-store";
 import { useI18n } from "@/i18n/provider";
 import { useToast } from "@/lib/toast-store";
-import { cn } from "@/lib/utils";
 import { getDynamicQRUrlWithFallback, isSafeDestination, DynamicQRError } from "@/features/qr/dynamic";
+import { useQRPublication, type PublicationStatus } from "@/features/qr/hooks/use-qr-publication";
+import { ShareQRButton } from "@/features/sharing/components/share-qr-button";
+import { CopyLinkButton } from "@/features/sharing/components/copy-link-button";
+import { DownloadQRButton } from "@/features/sharing/components/download-qr-button";
+import { isWellFormedHttpUrl } from "@/features/sharing/lib/share-metadata";
 import { QRAnalyticsCard } from "@/features/analytics/components/qr-analytics-card";
 import {
   Dialog,
@@ -32,18 +33,46 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+function PublicationStatusBadge({ status }: { status: PublicationStatus }) {
+  const { t } = useI18n();
+  const map: Record<PublicationStatus, { key: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+    synced: { key: "share.statusSynced", variant: "default" },
+    syncing: { key: "share.statusSyncing", variant: "outline" },
+    pending: { key: "share.statusPending", variant: "secondary" },
+    "not-published": { key: "share.statusNotPublished", variant: "secondary" },
+    offline: { key: "share.statusOffline", variant: "destructive" },
+  };
+  const { key, variant } = map[status];
+  const Icon =
+    status === "synced" ? (
+      <Check className="size-3.5" />
+    ) : status === "syncing" ? (
+      <Loader2 className="size-3.5 animate-spin" />
+    ) : status === "pending" ? (
+      <Clock className="size-3.5" />
+    ) : status === "offline" ? (
+      <WifiOff className="size-3.5" />
+    ) : (
+      <CloudOff className="size-3.5" />
+    );
+  return (
+    <Badge variant={variant} className="gap-1 text-[10px] px-1.5">
+      {Icon}
+      {t(key)}
+    </Badge>
+  );
+}
+
 export function QRDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { t } = useI18n();
   const { showToast } = useToast();
-  const online = useSyncStore((s) => s.online);
 
   const [record, setRecord] = useState<QRCodeRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [downloading, setDownloading] = useState<"png" | "svg" | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDestination, setShowDestination] = useState(false);
@@ -79,8 +108,13 @@ export function QRDetailContent() {
   const content = useQRContent(record);
   const preview = useQRPreviewDataUrl(content, record?.customization ?? null);
   const typeName = useQRTypeName(record?.type ?? null);
+  const publication = useQRPublication(record);
   const permanentUrl =
     record?.isDynamic && record.shortCode ? getDynamicQRUrlWithFallback(record.shortCode) : "";
+
+  const canOpenPublicUrl =
+    Boolean(publication?.published) && record?.status === "active";
+  const staticUrl = !record?.isDynamic && isWellFormedHttpUrl(content) ? content : "";
 
   if (loading) {
     return (
@@ -109,32 +143,11 @@ export function QRDetailContent() {
   }
 
   const handleCopy = async () => {
-    const ok = await copyToClipboard(content);
-    if (ok) {
+    const result = await copyToClipboard(content);
+    if (result.success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  };
-
-  const handleDownload = async (format: "png" | "svg") => {
-    setDownloading(format);
-    try {
-      if (format === "png") {
-        await downloadPNG(content, record.type, record.customization, record.name);
-      } else {
-        await downloadSVG(content, record.type, record.customization, record.name);
-      }
-    } finally {
-      setDownloading(null);
-    }
-  };
-
-  const handleShare = async () => {
-    await shareQRCode({
-      content,
-      name: record.name,
-      customization: record.customization,
-    });
   };
 
   const handleToggleFavorite = async () => {
@@ -158,14 +171,6 @@ export function QRDetailContent() {
     });
     showToast({ title: t("library.duplicated"), description: created.name, variant: "success" });
     router.push(`/qrs/${created.id}`);
-  };
-
-  const handleCopyPermanentUrl = async () => {
-    const ok = await copyToClipboard(permanentUrl);
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
   };
 
   const openDestinationDialog = () => {
@@ -255,20 +260,10 @@ export function QRDetailContent() {
               </Badge>
             )}
           </div>
-          {record.isDynamic && (
-            <p
-              className={cn(
-                "text-xs mt-1 flex items-center gap-1.5",
-                online ? "text-muted-foreground" : "text-amber-600 dark:text-amber-400"
-              )}
-            >
-              {online ? (
-                <Check className="size-3.5" />
-              ) : (
-                <CloudOff className="size-3.5" />
-              )}
-              {online ? t("detail.published") : t("detail.pendingSync")}
-            </p>
+          {record.isDynamic && publication && (
+            <div className="mt-1.5">
+              <PublicationStatusBadge status={publication.status} />
+            </div>
           )}
         </div>
         <button
@@ -311,37 +306,85 @@ export function QRDetailContent() {
       {/* Content */}
       <Card>
         <CardContent className="p-4">
-          <p className="text-xs text-muted-foreground font-medium mb-2">
-            {t("detail.contentLabel")}
-          </p>
-          <div className="rounded-lg bg-muted/60 p-3 font-mono text-xs break-all max-h-32 overflow-y-auto">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-xs text-muted-foreground font-medium">
+              {t("detail.contentLabel")}
+            </p>
+            {staticUrl && (
+              <div className="flex items-center gap-1.5">
+                <CopyLinkButton
+                  value={staticUrl}
+                  label={t("share.copyUrl")}
+                  size="icon-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={
+                    <a
+                      href={staticUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={t("share.open")}
+                    />
+                  }
+                >
+                  <ExternalLink className="size-4" />
+                  {t("share.open")}
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="rounded-lg bg-muted/60 p-3 font-mono text-xs break-all max-h-32 overflow-y-auto" dir="ltr">
             {content || "—"}
           </div>
         </CardContent>
       </Card>
 
-      {/* Permanent URL (dynamic only) */}
+      {/* Public QR URL (dynamic only) */}
       {record.isDynamic && permanentUrl && (
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Link2 className="size-3.5" />
-              {t("detail.permanentUrlLabel")}
+              {t("share.publicUrlLabel")}
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1 rounded-lg bg-muted/60 px-3 py-2 font-mono text-xs break-all" dir="ltr">
                 {permanentUrl}
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCopyPermanentUrl}
-                aria-label={t("detail.permanentUrlLabel")}
-                nativeButton={false}
-              >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              </Button>
+              <CopyLinkButton value={permanentUrl} label={t("share.copyUrl")} size="icon-sm" />
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <PublicationStatusBadge status={publication?.status ?? "not-published"} />
+              {canOpenPublicUrl ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={
+                    <a
+                      href={permanentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={t("share.open")}
+                    />
+                  }
+                >
+                  <ExternalLink className="size-4" />
+                  {t("share.open")}
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" disabled>
+                  <ExternalLink className="size-4" />
+                  {t("share.open")}
+                </Button>
+              )}
+            </div>
+            {!publication?.published && (
+              <p className="text-xs text-muted-foreground">
+                {t("share.notPublishedDesc")}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">{t("detail.visibilityDesc")}</p>
           </CardContent>
         </Card>
@@ -352,22 +395,27 @@ export function QRDetailContent() {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={() => handleDownload("png")} disabled={downloading !== null} nativeButton={false}>
-          <ImageIcon className="size-4" />
-          {downloading === "png" ? "..." : t("detail.downloadPng")}
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => handleDownload("svg")} disabled={downloading !== null} nativeButton={false}>
-          <FileCode className="size-4" />
-          {downloading === "svg" ? "..." : t("detail.downloadSvg")}
-        </Button>
+        <DownloadQRButton
+          target={{ content, customization: record.customization, type: record.type, name: record.name }}
+          variant="outline"
+          size="sm"
+        />
         <Button variant="ghost" size="sm" onClick={handleCopy} aria-label={getCopyLabel(record.type)} nativeButton={false}>
           {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           {copied ? t("detail.copied") : t("detail.copy")}
         </Button>
-        <Button variant="ghost" size="sm" onClick={handleShare} aria-label="Share" nativeButton={false}>
-          <Share2 className="size-4" />
-          {t("detail.share")}
-        </Button>
+        <ShareQRButton
+          target={{
+            name: record.name,
+            isDynamic: record.isDynamic,
+            content,
+            customization: record.customization,
+            type: record.type,
+            permanentUrl,
+            published: canOpenPublicUrl,
+            description: typeName,
+          }}
+        />
       </div>
 
       <Separator />

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Share2 } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/provider";
 import { copyToClipboard } from "../lib/qr-clipboard";
-import { shareQRCode } from "../lib/qr-share";
 import { getCopyLabel } from "../lib/qr-generator";
+import { ShareQRButton } from "@/features/sharing/components/share-qr-button";
 import type { QRType } from "@/types";
 import type { QRCustomization } from "../types";
 
@@ -22,15 +22,10 @@ export function QRContentActions({ type, content, customization, name }: QRConte
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    const ok = await copyToClipboard(content);
-    if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleShare = async () => {
-    await shareQRCode({ content, name, customization });
+    const result = await copyToClipboard(content);
+    if (!result.success) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -53,10 +48,15 @@ export function QRContentActions({ type, content, customization, name }: QRConte
           </>
         )}
       </Button>
-      <Button variant="ghost" size="sm" onClick={handleShare} aria-label={t("detail.share")}>
-        <Share2 className="size-4" />
-        {t("detail.share")}
-      </Button>
+      <ShareQRButton
+        target={{
+          name: name ?? getCopyLabel(type),
+          isDynamic: false,
+          content,
+          customization,
+          type,
+        }}
+      />
     </>
   );
 }

@@ -26,6 +26,14 @@ export async function pendingCount(): Promise<number> {
   return db.count(DB_QUEUE_STORE);
 }
 
+/** Is there at least one queued mutation for a specific record? Used to tell a
+ *  record with unsent changes (pending) from one that is fully published. */
+export async function hasPendingOperations(recordId: string): Promise<boolean> {
+  const db = await getDB();
+  const all = await db.getAll(DB_QUEUE_STORE);
+  return all.some((op) => op.recordId === recordId);
+}
+
 /**
  * Queue a mutation, coalescing against operations already queued for the same
  * record so we never replay an outdated value after a newer one.

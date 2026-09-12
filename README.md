@@ -6,7 +6,18 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
-### Phase 8 (Current)
+### Phase 9 (Current)
+- **Central sharing service** — new `src/features/sharing/` feature hosts the qr share/copy/download logic that the create, detail, library and dashboard screens all reuse (single implementation, no duplicated handlers)
+- **Web Share API with reliable fallback** — a share button uses the native system share sheet (sharing the rendered PNG file when customization is active, falling back to text). When the native sheet is unavailable the button opens the **Share dialog** instead, so there is never a dead end: copy the permanent URL / content or download from there. `shareQRCode()` itself ends in clipboard as a last resort
+- **Copy again, safely** — `copyToClipboard()` returns a structured `{ success, error? }` result (Clipboard API with an `execCommand` legacy fallback), and "Copy content" reuses the Phase 2 generator so the copied text always matches what the QR encodes
+- **Public QR URL card** — the detail page now shows the QR's permanent public URL (LTR, mono), with **Copy link** and **Open**, plus a live publication badge: *Published / Publishing… / Pending changes / Not published / Offline* (published = signed in + online + up-to-date with the sync queue)
+- **Safe opening & sharing** — "Open" only ever navigates to validated `http(s)` URLs in a new tab (`rel="noopener noreferrer"`); dynamic QR sharing always sends the permanent URL, never the destination; shared/copied files keep the `qr-manager-<name>.png` naming
+- **Downloads everywhere** — PNG / SVG download actions (same icons as Phase 2/3) are exposed on the detail page, the library card menu, and the share dialog via the shared `DownloadQRButton`
+- **Privacy & SEO** — `/robots.txt` disallows the private app pages and `/qr/`; login-gated pages and the public QR route send `noindex, nofollow`; the public QR response family adds `Referrer-Policy: no-referrer` and `X-Content-Type-Options: nosniff` on top of `no-store`
+- **i18n** — a new `share` namespace (buttons, dialog, toasts, publication badges) is fully localized in FR, EN, AR
+- **Unit tests** — clipboard behavior/fallbacks, safe-URL parsing (rejects `javascript:`, empty, malformed), share-metadata correctness (destination never exposed), native-share flows (file name, text share, abort, copied, failed) and queue pending-state detection. Suite total: 284 tests, all green
+
+### Phase 8
 - **Advanced designer** — `/create` now has a full design panel: the 5 one-click presets plus live preview, module styles (square/rounded/dots), independent finder-eye styles with optional eye color, foreground/background color pickers, size, quiet-zone margin and error-correction level
 - **Center logo** — upload a PNG/JPEG/WebP/SVG (max 2 MB, never uploaded — read locally as a data URL) with size, margin and shape (square/rounded/circle) controls; drawn on a white contrast plate so it never blends into busy modules
 - **Frames & text** — None / Simple / Rounded / Badge (top plate) / Scan (bottom band), with optional caption text (≤30 chars) that auto-detects RTL scripts (Arabic/Hebrew)

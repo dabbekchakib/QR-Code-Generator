@@ -5,6 +5,7 @@ import { AnalyticsContent } from "@/features/analytics/components/analytics-cont
 export const metadata: Metadata = {
   title: "Analytics",
   description: "Track and analyze your QR Code scan statistics.",
+  robots: { index: false, follow: false },
 };
 
 export default function AnalyticsPage() {

@@ -1,5 +1,6 @@
 import type { QRType } from "@/types";
 import type { QRCustomization } from "../types";
+import { normalizeCustomization } from "../types";
 import { renderDesignToDataURL } from "../designer/qr-render-canvas";
 import { buildQRSVG } from "../designer/qr-render-svg";
 
@@ -35,10 +36,11 @@ function getFilename(type: QRType, name: string | undefined, ext: string): strin
 export async function downloadPNG(
   content: string,
   type: QRType,
-  customization: QRCustomization,
+  customization: QRCustomization | null | undefined,
   name?: string
 ): Promise<void> {
-  const dataURL = await renderDesignToDataURL(content, customization);
+  const resolved = normalizeCustomization(customization ?? { size: 512, margin: 4, foreground: "#000000", background: "#FFFFFF", errorCorrection: "M", style: "square" });
+  const dataURL = await renderDesignToDataURL(content, resolved);
   const res = await fetch(dataURL);
   const blob = await res.blob();
   triggerDownload(blob, getFilename(type, name, "png"));
@@ -47,10 +49,11 @@ export async function downloadPNG(
 export async function downloadSVG(
   content: string,
   type: QRType,
-  customization: QRCustomization,
+  customization: QRCustomization | null | undefined,
   name?: string
 ): Promise<void> {
-  const svgString = buildQRSVG(content, customization);
+  const resolved = normalizeCustomization(customization ?? { size: 512, margin: 4, foreground: "#000000", background: "#FFFFFF", errorCorrection: "M", style: "square" });
+  const svgString = buildQRSVG(content, resolved);
   const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
   triggerDownload(blob, getFilename(type, name, "svg"));
 }

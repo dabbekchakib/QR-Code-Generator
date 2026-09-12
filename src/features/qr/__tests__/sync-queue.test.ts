@@ -8,6 +8,7 @@ import {
   removeOperation,
   discardOperationsForRecord,
   clearQueue,
+  hasPendingOperations,
 } from "../sync/queue-store";
 import { createSyncOperation } from "../sync/types";
 
@@ -94,5 +95,13 @@ describe("SyncQueue", () => {
     await enqueue(createSyncOperation("CREATE", "a"));
     await clearQueue();
     expect(await pendingCount()).toBe(0);
+  });
+
+  it("reports whether a specific record has pending operations", async () => {
+    await enqueue(createSyncOperation("CREATE", "a"));
+    await enqueue(createSyncOperation("UPDATE", "b"));
+    expect(await hasPendingOperations("a")).toBe(true);
+    expect(await hasPendingOperations("b")).toBe(true);
+    expect(await hasPendingOperations("c")).toBe(false);
   });
 });

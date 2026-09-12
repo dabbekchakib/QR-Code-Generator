@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Star, MoreVertical, Pencil, Copy, Trash2, Download, ImageIcon, FileCode, Eye } from "lucide-react";
+import { Star, MoreVertical, Pencil, Copy, Trash2, Download, ImageIcon, FileCode, Eye, Share2, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,15 @@ import {
   useQRTypeName,
 } from "@/features/qr/hooks/use-qr-preview";
 import { useI18n } from "@/i18n/provider";
+import { useToast } from "@/lib/toast-store";
 import { formatUpdatedAt } from "@/features/qr/storage/utils";
 import type { QRCodeRecord } from "@/features/qr/storage";
 import { downloadPNG, downloadSVG } from "@/features/qr/lib/qr-download";
+import { copyToClipboard } from "@/features/qr/lib/qr-clipboard";
+import { getDynamicQRUrlWithFallback } from "@/features/qr/dynamic";
+import { useQRPublication } from "@/features/qr/hooks/use-qr-publication";
+import { canShareNative, shareQRCode, getShareText, isSafeUrl } from "@/features/sharing/lib/index";
+import { ShareQRDialog } from "@/features/sharing/components/share-qr-dialog";
 import { cn } from "@/lib/utils";
 
 interface QRCardProps {
@@ -34,10 +40,52 @@ interface QRCardProps {
 
 export function QRCard({ record, onToggleFavorite, onDuplicate, onDelete }: QRCardProps) {
   const { locale, t } = useI18n();
+  const { showToast } = useToast();
   const content = useQRContent(record);
   const preview = useQRPreviewDataUrl(content, record.customization);
   const typeName = useQRTypeName(record.type);
+  const publication = useQRPublication(record);
   const [downloading, setDownloading] = useState<"png" | "svg" | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+
+  const permanentUrl =
+    record.isDynamic && record.shortCode ? getDynamicQRUrlWithFallback(record.shortCode) : "";
+  const shareValue = getShareText({
+    isDynamic: record.isDynamic,
+    content,
+    permanentUrl,
+  });
+  const published = Boolean(publication?.published);
+  const canOpenPublic = Boolean(
+    record.isDynamic && published && permanentUrl && isSafeUrl(permanentUrl)
+  );
+  const canOpenContent = Boolean(!record.isDynamic && isSafeUrl(content));
+
+  const handleShare = async () => {
+    if (!canShareNative()) {
+      setShareDialogOpen(true);
+      return;
+    }
+    const result = await shareQRCode({
+      content: shareValue,
+      name: record.name,
+      customization: record.customization,
+    });
+    if (result === "shared") {
+      showToast({ title: t("share.toastQRShared"), variant: "success" });
+    } else if (result === "failed") {
+      setShareDialogOpen(true);
+    }
+  };
+
+  const handleCopy = async () => {
+    const result = await copyToClipboard(shareValue);
+    if (result.success) {
+      showToast({ title: t("share.toastCopied"), variant: "success" });
+    } else {
+      showToast({ title: t("share.clipboardUnavailable"), variant: "error" });
+    }
+  };
 
   const handleDownload = async (format: "png" | "svg") => {
     setDownloading(format);
@@ -159,6 +207,44 @@ export function QRCard({ record, onToggleFavorite, onDuplicate, onDelete }: QRCa
                   {t("detail.duplicate")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleShare}>
+                  <Share2 className="size-4" />
+                  {t("share.share")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopy}>
+                  <Copy className="size-4" />
+                  {record.isDynamic ? t("share.copyUrl") : t("share.copyContent")}
+                </DropdownMenuItem>
+                {canOpenPublic ? (
+                  <DropdownMenuItem
+                    render={
+                      <a
+                        href={permanentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={t("share.open")}
+                      />
+                    }
+                  >
+                    <ExternalLink className="size-4" />
+                    {t("share.open")}
+                  </DropdownMenuItem>
+                ) : canOpenContent ? (
+                  <DropdownMenuItem
+                    render={
+                      <a
+                        href={content}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={t("share.open")}
+                      />
+                    }
+                  >
+                    <ExternalLink className="size-4" />
+                    {t("share.open")}
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   variant="destructive"
                   onClick={() => onDelete(record)}
@@ -171,6 +257,21 @@ export function QRCard({ record, onToggleFavorite, onDuplicate, onDelete }: QRCa
           </div>
         </div>
       </CardContent>
+
+      <ShareQRDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        target={{
+          name: record.name,
+          isDynamic: record.isDynamic,
+          content,
+          customization: record.customization,
+          type: record.type,
+          permanentUrl,
+          published,
+          description: typeName,
+        }}
+      />
     </Card>
   );
 }

@@ -79,6 +79,8 @@ export function renderPublicError(
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
       "x-robots-tag": "noindex, nofollow",
+      "referrer-policy": "no-referrer",
+      "x-content-type-options": "nosniff",
     },
   });
 }

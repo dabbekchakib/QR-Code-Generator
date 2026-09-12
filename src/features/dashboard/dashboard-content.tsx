@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { useQRs } from "@/features/qr/hooks/use-qrs";
 import { useQRPreviewDataUrl, useQRTypeName } from "@/features/qr/hooks/use-qr-preview";
 import { useQRContent } from "@/features/qr/hooks/use-qr-preview";
+import { useQRPublication } from "@/features/qr/hooks/use-qr-publication";
+import { getDynamicQRUrlWithFallback } from "@/features/qr/dynamic";
+import { ShareQRButton } from "@/features/sharing/components/share-qr-button";
 import {
   QrCode,
   ScanLine,
@@ -30,49 +33,73 @@ function RecentQRCard({ id }: { id: string }) {
   const content = useQRContent(record ?? null);
   const preview = useQRPreviewDataUrl(content, record?.customization ?? null);
   const typeName = useQRTypeName(record?.type ?? null);
+  const publication = useQRPublication(record ?? null);
 
   if (!record) return null;
 
+  const permanentUrl =
+    record.isDynamic && record.shortCode
+      ? getDynamicQRUrlWithFallback(record.shortCode)
+      : "";
+
   return (
-    <Link href={`/qrs/${record.id}`} className="block group">
-      <Card className="h-full transition-colors group-hover:border-primary/40">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={preview}
-                alt={record.name}
-                className="size-12 rounded-lg border bg-white shrink-0"
-              />
-            ) : (
-              <div className="size-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <QrCode className="size-5 text-muted-foreground" />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {record.name}
+    <div className="group relative">
+      <Link href={`/qrs/${record.id}`} className="block">
+        <Card className="h-full transition-colors group-hover:border-primary/40">
+          <CardContent className="p-4 pr-12">
+            <div className="flex items-start gap-3">
+              {preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={preview}
+                  alt={record.name}
+                  className="size-12 rounded-lg border bg-white shrink-0"
+                />
+              ) : (
+                <div className="size-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <QrCode className="size-5 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {record.name}
+                  </p>
+                  {record.favorite && (
+                    <Star className="size-3 fill-amber-400 text-amber-400 shrink-0" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {typeName} • {formatUpdatedAt(record.updatedAt)}
                 </p>
-                {record.favorite && (
-                  <Star className="size-3 fill-amber-400 text-amber-400 shrink-0" />
-                )}
+                <Badge variant="secondary" className="mt-1.5 text-[10px]">
+                  {record.isDynamic
+                    ? t("library.status.dynamic")
+                    : t("library.status.static")}
+                </Badge>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {typeName} • {formatUpdatedAt(record.updatedAt)}
-              </p>
-              <Badge variant="secondary" className="mt-1.5 text-[10px]">
-                {record.isDynamic
-                  ? t("library.status.dynamic")
-                  : t("library.status.static")}
-              </Badge>
             </div>
-            <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors mt-1 shrink-0" />
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
+          </CardContent>
+        </Card>
+      </Link>
+      <ShareQRButton
+        iconOnly
+        size="icon-sm"
+        variant="ghost"
+        className="absolute top-3 end-1.5"
+        target={{
+          name: record.name,
+          isDynamic: record.isDynamic,
+          content,
+          customization: record.customization,
+          type: record.type,
+          permanentUrl,
+          published: Boolean(publication?.published),
+          description: typeName,
+        }}
+        ariaLabel={t("share.share")}
+      />
+    </div>
   );
 }
 

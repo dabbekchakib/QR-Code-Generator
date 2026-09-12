@@ -55,6 +55,8 @@ export async function GET(
           Location: outcome.location,
           "X-Robots-Tag": "noindex, nofollow",
           "Cache-Control": "no-store",
+          "Referrer-Policy": "no-referrer",
+          "X-Content-Type-Options": "nosniff",
         },
       });
   }
