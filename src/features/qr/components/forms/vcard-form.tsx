@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/i18n/provider";
 import type { VCardValues } from "../../types";
 
 interface VCardFormProps {
@@ -10,6 +11,7 @@ interface VCardFormProps {
 }
 
 export function VCardForm({ values, onChange, errors }: VCardFormProps) {
+  const { t } = useI18n();
   const update = (field: keyof VCardValues, val: string) =>
     onChange({ ...values, [field]: val });
 
@@ -18,11 +20,11 @@ export function VCardForm({ values, onChange, errors }: VCardFormProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label htmlFor="vc-first" className="text-sm font-medium">
-            First Name <span className="text-destructive">*</span>
+            {t("templates.fields.firstName")} <span className="text-destructive">*</span>
           </label>
           <Input
             id="vc-first"
-            placeholder="John"
+            placeholder={t("templates.placeholders.firstName")}
             value={values.firstName}
             onChange={(e) => update("firstName", e.target.value)}
             aria-invalid={!!errors?.firstName}
@@ -36,11 +38,11 @@ export function VCardForm({ values, onChange, errors }: VCardFormProps) {
         </div>
         <div className="space-y-2">
           <label htmlFor="vc-last" className="text-sm font-medium">
-            Last Name <span className="text-destructive">*</span>
+            {t("templates.fields.lastName")} <span className="text-destructive">*</span>
           </label>
           <Input
             id="vc-last"
-            placeholder="Doe"
+            placeholder={t("templates.placeholders.lastName")}
             value={values.lastName}
             onChange={(e) => update("lastName", e.target.value)}
             aria-invalid={!!errors?.lastName}
@@ -57,22 +59,22 @@ export function VCardForm({ values, onChange, errors }: VCardFormProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label htmlFor="vc-org" className="text-sm font-medium">
-            Organization
+            {t("templates.fields.organization")}
           </label>
           <Input
             id="vc-org"
-            placeholder="Acme Inc."
+            placeholder={t("templates.placeholders.organization")}
             value={values.organization}
             onChange={(e) => update("organization", e.target.value)}
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="vc-title" className="text-sm font-medium">
-            Job Title
+            {t("templates.fields.jobTitle")}
           </label>
           <Input
             id="vc-title"
-            placeholder="Software Engineer"
+            placeholder={t("templates.placeholders.jobTitle")}
             value={values.jobTitle}
             onChange={(e) => update("jobTitle", e.target.value)}
           />
@@ -82,24 +84,24 @@ export function VCardForm({ values, onChange, errors }: VCardFormProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label htmlFor="vc-phone" className="text-sm font-medium">
-            Phone
+            {t("templates.fields.phone")}
           </label>
           <Input
             id="vc-phone"
             type="tel"
-            placeholder="+216 24 246 619"
+            placeholder={t("templates.placeholders.phone")}
             value={values.phone}
             onChange={(e) => update("phone", e.target.value)}
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="vc-email" className="text-sm font-medium">
-            Email
+            {t("templates.fields.email")}
           </label>
           <Input
             id="vc-email"
             type="email"
-            placeholder="john@acme.com"
+            placeholder={t("templates.placeholders.email")}
             value={values.email}
             onChange={(e) => update("email", e.target.value)}
           />
@@ -108,12 +110,12 @@ export function VCardForm({ values, onChange, errors }: VCardFormProps) {
 
       <div className="space-y-2">
         <label htmlFor="vc-website" className="text-sm font-medium">
-          Website
+          {t("templates.fields.website")}
         </label>
         <Input
           id="vc-website"
           type="url"
-          placeholder="https://acme.com"
+          placeholder={t("templates.placeholders.website")}
           value={values.website}
           onChange={(e) => update("website", e.target.value)}
         />
@@ -121,11 +123,11 @@ export function VCardForm({ values, onChange, errors }: VCardFormProps) {
 
       <div className="space-y-2">
         <label htmlFor="vc-address" className="text-sm font-medium">
-          Address
+          {t("templates.fields.address")}
         </label>
         <Input
           id="vc-address"
-          placeholder="123 Main Street"
+          placeholder={t("templates.placeholders.address")}
           value={values.address}
           onChange={(e) => update("address", e.target.value)}
         />
@@ -134,22 +136,22 @@ export function VCardForm({ values, onChange, errors }: VCardFormProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label htmlFor="vc-city" className="text-sm font-medium">
-            City
+            {t("templates.fields.city")}
           </label>
           <Input
             id="vc-city"
-            placeholder="Paris"
+            placeholder={t("templates.placeholders.city")}
             value={values.city}
             onChange={(e) => update("city", e.target.value)}
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="vc-country" className="text-sm font-medium">
-            Country
+            {t("templates.fields.country")}
           </label>
           <Input
             id="vc-country"
-            placeholder="France"
+            placeholder={t("templates.placeholders.country")}
             value={values.country}
             onChange={(e) => update("country", e.target.value)}
           />
@@ -158,11 +160,11 @@ export function VCardForm({ values, onChange, errors }: VCardFormProps) {
 
       <div className="space-y-2">
         <label htmlFor="vc-note" className="text-sm font-medium">
-          Note
+          {t("templates.fields.note")}
         </label>
         <textarea
           id="vc-note"
-          placeholder="Additional info..."
+          placeholder={t("templates.placeholders.note")}
           rows={2}
           value={values.note}
           onChange={(e) => update("note", e.target.value)}

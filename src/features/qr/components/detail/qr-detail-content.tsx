@@ -13,7 +13,6 @@ import { qrService } from "@/features/qr/service/qr-service";
 import type { QRCodeRecord, QRStatus } from "@/features/qr/storage";
 import { useQRContent, useQRPreviewDataUrl, useQRTypeName } from "@/features/qr/hooks/use-qr-preview";
 import { copyToClipboard } from "@/features/qr/lib/qr-clipboard";
-import { getCopyLabel } from "@/features/qr/lib/qr-generator";
 import { duplicateRecord } from "@/features/qr/storage/utils";
 import { useI18n } from "@/i18n/provider";
 import { useToast } from "@/lib/toast-store";
@@ -400,7 +399,7 @@ export function QRDetailContent() {
           variant="outline"
           size="sm"
         />
-        <Button variant="ghost" size="sm" onClick={handleCopy} aria-label={getCopyLabel(record.type)} nativeButton={false}>
+        <Button variant="ghost" size="sm" onClick={handleCopy} aria-label={`${t("share.copy")} ${t(`qrTypes.${record.type}.name`)}`} nativeButton={false}>
           {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
           {copied ? t("detail.copied") : t("detail.copy")}
         </Button>

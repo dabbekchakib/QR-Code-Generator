@@ -546,7 +546,7 @@ export function CreateQRContent() {
                     <div>
                       <p className="text-sm font-medium">
                         {t(`qrTypes.${type.type}.name`)}
-                        {isLocked && <Lock className="inline size-3 ml-1 text-muted-foreground" />}
+                        {isLocked && <Lock className="inline size-3 ms-1 text-muted-foreground" />}
                       </p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         {t(type.descKey)}

@@ -21,10 +21,10 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
+      allow: ["/", "/privacy", "/terms"],
       disallow: PRIVATE_PREFIXES,
     },
     host: appUrl,
-    sitemap: undefined,
+    sitemap: `${appUrl}/sitemap.xml`,
   };
 }

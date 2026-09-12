@@ -8,6 +8,7 @@ import { formatUpdatedAt } from "@/features/qr/storage/utils";
 import type { QRCodeRecord } from "@/features/qr/storage/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useI18n } from "@/i18n/provider";
 
 function RecentQRCard({ record }: { record: QRCodeRecord }) {
   const content = useQRContent(record);
@@ -51,6 +52,7 @@ function RecentQRCard({ record }: { record: QRCodeRecord }) {
 
 export function HomeRecentQRs() {
   const { records, loading } = useQRs();
+  const { t } = useI18n();
 
   if (loading || records.length === 0) return null;
 
@@ -67,14 +69,14 @@ export function HomeRecentQRs() {
         <div className="flex items-end justify-between mb-8">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-              Recent QR Codes
+              {t("home.recentTitle")}
             </h2>
             <p className="text-muted-foreground mt-1">
-              Pick up where you left off.
+              {t("home.recentSubtitle")}
             </p>
           </div>
           <Button variant="outline" size="sm" render={<Link href="/qrs" />} nativeButton={false}>
-            My QR Codes
+            {t("home.myQRCodes")}
             <ArrowRight className="size-3" />
           </Button>
         </div>

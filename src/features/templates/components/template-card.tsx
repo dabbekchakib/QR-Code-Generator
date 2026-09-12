@@ -46,7 +46,7 @@ export function TemplateCard({ template, favorite, onToggleFavorite, onUse }: Te
               }
               onClick={() => onToggleFavorite(template.id)}
               className={cn(
-                "-mr-1 -mt-1 shrink-0 text-muted-foreground",
+                "-me-1 -mt-1 shrink-0 text-muted-foreground",
                 favorite && "text-amber-500"
               )}
             >

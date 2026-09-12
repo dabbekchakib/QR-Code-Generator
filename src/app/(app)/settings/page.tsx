@@ -13,6 +13,7 @@ import { useQRs } from "@/features/qr/hooks/use-qrs";
 import { qrService } from "@/features/qr/service/qr-service";
 import { useAuth } from "@/lib/auth/use-auth";
 import { useToast } from "@/lib/toast-store";
+import { importErrorKey } from "@/features/qr/lib/import-error";
 import { ProfileForm } from "./profile-form";
 import { DesignDefaultsForm } from "./design-defaults";
 import { Moon, Sun, Monitor, Globe, QrCode, Palette, Download, Upload, Trash2, HardDrive, User, Key, ShieldCheck, Brush } from "lucide-react";
@@ -104,13 +105,13 @@ export default function SettingsPage() {
       await refresh();
       showToast({
         title: t("library.imported"),
-        description: `${count} QR Code${count > 1 ? "s" : ""}`,
+        description: t("library.importedCount", { count }),
         variant: "success",
       });
     } catch (err) {
       showToast({
         title: t("library.importFailed"),
-        description: err instanceof Error ? err.message : "Invalid file",
+        description: t(importErrorKey(err)),
         variant: "error",
       });
     } finally {
@@ -225,7 +226,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {t("settings.localData.description")} ({records.length} QR Code{records.length > 1 ? "s" : ""})
+            {t("settings.localData.description")} ({t("settings.localData.countLabel", { count: records.length })})
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -246,6 +247,7 @@ export default function SettingsPage() {
               type="file"
               accept="application/json,.json"
               className="hidden"
+              aria-label={t("library.importAria")}
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) handleImportFile(file);

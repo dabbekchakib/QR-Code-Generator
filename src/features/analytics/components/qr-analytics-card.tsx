@@ -106,7 +106,7 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg bg-muted/60 px-3 py-2.5">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">
-        <ScanLine className="size-4 inline-block mr-1.5 align-[-2px] text-primary opacity-70" />
+        <ScanLine className="size-4 inline-block me-1.5 align-[-2px] text-primary opacity-70" />
         {value}
       </p>
     </div>

@@ -6,6 +6,16 @@ Create, customize and manage QR Codes from one simple, free application.
 
 ## Features
 
+### Phase 12 (Final) — Production Release & Final Polish
+- **Fully localized landing page** — the homepage is now a server component that renders each localized copy (FR/EN/AR) from the persisted locale cookie at SSR, with **zero client JavaScript** on the landing page; footer links to the new legal pages
+- **i18n hardening (complete)** — the 7 QR-type forms, the recent-QR section, header (open/close menu, navigation), dialog/sheet close buttons, QR-preview labels, import/export toasts and file-input aria-labels are all localized; copy-action labels are composed from localized keys instead of `getCopyLabel`; import failures map internal engine messages to translated toasts (empty/too-large/invalid-JSON/invalid-structure) and count confirmation is localized
+- **RTL fixes** — logical properties (`ms-`/`me-`/`start-`/`end-`) replace directional margins on flagged surfaces (create, template cards, dashboard tiles, analytics cards, dialog/sheet close buttons, dropdown shortcuts)
+- **Legal pages** — `/privacy` and `/terms` in FR/EN/AR with RTL support, written strictly for the app's real behavior (local storage, optional Supabase account, scan analytics limited to type/OS/browser, locale + auth cookies only); `/robots.txt` now allows them and a `sitemap.xml` lists `/`, `/privacy`, `/terms`
+- **SEO** — `og:url`, canonical and `metadataBase` are resolved from `NEXT_PUBLIC_APP_URL` (no hardcoded domain); a build-time **Open Graph image** (`/opengraph-image`, `next/og`, Node runtime) renders the QR Manager branded card for social sharing
+- **QR preview quality** — a generation failure now surfaces a visible, screen-reader-announced (`role="alert"`) localized error instead of failing silently
+- **Tests (360 total)** — new coverage for the import-error → i18n-key mapping (including a guarantee that every `parseBackupJson` failure resolves to a translated key) and legal-content integrity across all three locales
+- **Validation** — `npm run lint`, `npx tsc --noEmit`, `npx vitest run` (360/360), production build and `npm audit` (0 vulnerabilities) all green; E2E remains a documented future improvement (see `docs/PRODUCTION-READINESS.md`)
+
 ### Phase 11 (Current) — PWA Offline + Performance + Security Hardening
 - **Service worker hardened** — `public/sw.js` now: precaches the app shell, manifest and icons per URL (a failing entry can never abort an install), **warms up the hashed `/_next/static` assets** referenced by the precached pages so a fresh install works offline immediately, stores each navigation under its **exact URL** (the offline home is never overwritten by the last visited page), uses network-first navigations with an offline fallback chain, and **never caches Supabase/auth responses or anything carrying an `Authorization` header**
 - **Controlled updates** — the new worker no longer calls `skipWaiting()` on install: it waits, the "Refresh to update" banner posts `SKIP_WAITING` only when the user agrees; `activate` cleans old caches
@@ -148,7 +158,8 @@ Create, customize and manage QR Codes from one simple, free application.
 - TypeScript strict mode
 
 ### Upcoming Phases
-- To be defined
+
+Project is feature-complete. Future developments are tracked in `docs/PRODUCTION-READINESS.md` (E2E suite, chunk splitting, remaining i18n coverage for error boundaries).
 
 ## Tech Stack
 
@@ -184,7 +195,12 @@ src/
 │   │   └── register/
 │   ├── layout.tsx          # Root layout (fonts, metadata, viewport, providers)
 │   ├── providers.tsx       # Theme, i18n, SW + toaster providers (auth lives in (app)/(auth))
-│   ├── page.tsx            # Landing page
+│   ├── page.tsx            # Landing page (server-rendered, localized)
+│   ├── privacy/            # Privacy policy (FR/EN/AR)
+│   ├── terms/              # Terms of use (FR/EN/AR)
+│   ├── robots.ts           # /robots.txt
+│   ├── sitemap.ts          # /sitemap.xml
+│   ├── opengraph-image.tsx # Social-share OG image (build-time)
 │   ├── qr/
 │   │   └── [shortCode]/    # Public dynamic QR redirect route
 │   └── not-found.tsx       # 404 page
@@ -197,6 +213,9 @@ src/
 │   └── online-indicator.tsx
 ├── features/               # Feature-specific modules
 │   ├── dashboard/
+│   ├── analytics/           # scan analytics, redirect service, admin dashboard
+│   ├── legal/               # privacy/terms content + page component (FR/EN/AR)
+│   ├── sharing/             # share/copy/download service
 │   ├── templates/           # template registry, schemas, data, presets, gallery UI, prefs store
 │   └── qr/
 │       ├── components/      # QRType cards, forms, preview, customizer, download
@@ -209,7 +228,7 @@ src/
 │       ├── sync/            # sync queue store, conflict resolution, sync engine
 │       ├── dynamic/         # short codes, destination validation, public-page renderer, public URL
 │       ├── service/         # qr-service orchestration (local cache + cloud + queue)
-│       ├── lib/             # qr-generator, qr-renderer, qr-download, qr-clipboard
+│       ├── lib/             # qr-generator, qr-renderer, qr-download, qr-clipboard, import-error
 │       ├── __tests__/       # Unit tests
 │       ├── types.ts         # Form values + customization types
 │       └── schemas.ts       # Per-type Zod schemas

@@ -144,22 +144,3 @@ export function generateQRContent(
       return generateTextData(values as TextValues);
   }
 }
-
-export function getCopyLabel(type: QRType): string {
-  switch (type) {
-    case "website":
-      return "Copy URL";
-    case "wifi":
-      return "Copy WiFi data";
-    case "phone":
-      return "Copy phone number";
-    case "email":
-      return "Copy email";
-    case "whatsapp":
-      return "Copy WhatsApp link";
-    case "vcard":
-      return "Copy vCard";
-    case "text":
-      return "Copy text";
-  }
-}

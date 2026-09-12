@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/i18n/provider";
 import type { URLValues } from "../../types";
 
 interface URLFormProps {
@@ -10,15 +11,17 @@ interface URLFormProps {
 }
 
 export function URLForm({ values, onChange, errors }: URLFormProps) {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-2">
       <label htmlFor="qr-url" className="text-sm font-medium">
-        Website URL <span className="text-destructive">*</span>
+        {t("templates.fields.url")} <span className="text-destructive">*</span>
       </label>
       <Input
         id="qr-url"
         type="url"
-        placeholder="https://example.com"
+        placeholder={t("templates.placeholders.url")}
         value={values.url}
         onChange={(e) => onChange({ ...values, url: e.target.value })}
         aria-invalid={!!errors?.url}
@@ -30,7 +33,7 @@ export function URLForm({ values, onChange, errors }: URLFormProps) {
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        Include https:// or http:// — if omitted, https:// will be added automatically.
+        {t("templates.helpers.urlScheme")}
       </p>
     </div>
   );

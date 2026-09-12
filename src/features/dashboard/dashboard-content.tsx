@@ -43,7 +43,7 @@ function RecentQRCard({ record }: { record: QRCodeRecord }) {
     <div className="group relative">
       <Link href={`/qrs/${record.id}`} className="block">
         <Card className="h-full transition-colors group-hover:border-primary/40">
-          <CardContent className="p-4 pr-12">
+          <CardContent className="p-4 pe-12">
             <div className="flex items-start gap-3">
               {preview ? (
                 // eslint-disable-next-line @next/next/no-img-element

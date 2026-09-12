@@ -5,6 +5,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { defaultLocale, locales, rtlLocales, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/utils";
+import { getAppBaseUrl } from "@/features/qr/dynamic/url";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -16,6 +17,10 @@ const notoArabic = Noto_Sans_Arabic({
   subsets: ["arabic"],
   variable: "--font-arabic",
 });
+
+// Resolved at build time on the server: env fallback keeps the URL correct
+// without hardcoding the production domain across environments.
+const appUrl = getAppBaseUrl() || "https://qr-manager.app";
 
 export const metadata: Metadata = {
   title: {
@@ -35,10 +40,14 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "QR Manager" }],
   creator: "QR Manager",
+  alternates: {
+    canonical: appUrl,
+  },
+  metadataBase: new URL(appUrl),
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    url: "https://qr-manager.app",
+    url: appUrl,
     siteName: "QR Manager",
     title: "QR Manager — Free QR Code Generator & Manager",
     description:

@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { qrTypes } from "@/features/qr/qr-types-config";
+import { importErrorKey } from "@/features/qr/lib/import-error";
 
 const statusFilters: QRStatusFilter[] = ["all", "static", "dynamic", "favorites"];
 
@@ -107,14 +108,14 @@ export function QRListContent() {
       }
       showToast({
         title: t("library.imported"),
-        description: `${count} QR Code${count > 1 ? "s" : ""}`,
+        description: t("library.importedCount", { count }),
         variant: "success",
       });
       await refresh();
     } catch (err) {
       showToast({
         title: t("library.importFailed"),
-        description: err instanceof Error ? err.message : "Invalid file",
+        description: t(importErrorKey(err)),
         variant: "error",
       });
     } finally {
@@ -194,7 +195,7 @@ export function QRListContent() {
             type="file"
             accept="application/json,.json"
             className="hidden"
-            aria-label="Import QR codes backup"
+            aria-label={t("library.importAria")}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) handleImportFile(file);

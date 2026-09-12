@@ -5,7 +5,6 @@ import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/provider";
 import { copyToClipboard } from "../lib/qr-clipboard";
-import { getCopyLabel } from "../lib/qr-generator";
 import { ShareQRButton } from "@/features/sharing/components/share-qr-button";
 import type { QRType } from "@/types";
 import type { QRCustomization } from "../types";
@@ -21,6 +20,8 @@ export function QRContentActions({ type, content, customization, name }: QRConte
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
+  const copyLabel = `${t("share.copy")} ${t(`qrTypes.${type}.name`)}`;
+
   const handleCopy = async () => {
     const result = await copyToClipboard(content);
     if (!result.success) return;
@@ -34,7 +35,7 @@ export function QRContentActions({ type, content, customization, name }: QRConte
         variant="ghost"
         size="sm"
         onClick={handleCopy}
-        aria-label={copied ? t("detail.copied") : getCopyLabel(type)}
+        aria-label={copied ? t("detail.copied") : copyLabel}
       >
         {copied ? (
           <>
@@ -44,13 +45,13 @@ export function QRContentActions({ type, content, customization, name }: QRConte
         ) : (
           <>
             <Copy className="size-4" />
-            {getCopyLabel(type)}
+            {copyLabel}
           </>
         )}
       </Button>
       <ShareQRButton
         target={{
-          name: name ?? getCopyLabel(type),
+          name: name ?? copyLabel,
           isDynamic: false,
           content,
           customization,

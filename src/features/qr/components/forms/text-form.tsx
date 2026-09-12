@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/provider";
 import type { TextValues } from "../../types";
 
 interface TextFormProps {
@@ -11,16 +12,17 @@ interface TextFormProps {
 const MAX_CHARS = 4296;
 
 export function TextForm({ values, onChange, errors }: TextFormProps) {
+  const { t } = useI18n();
   const charCount = values.text.length;
 
   return (
     <div className="space-y-2">
       <label htmlFor="qr-text" className="text-sm font-medium">
-        Text Content <span className="text-destructive">*</span>
+        {t("templates.fields.textContent")} <span className="text-destructive">*</span>
       </label>
       <textarea
         id="qr-text"
-        placeholder="Enter your text here..."
+        placeholder={t("templates.placeholders.text")}
         rows={5}
         maxLength={MAX_CHARS}
         value={values.text}
@@ -45,7 +47,7 @@ export function TextForm({ values, onChange, errors }: TextFormProps) {
         </p>
       </div>
       <p className="text-xs text-muted-foreground">
-        Supports Unicode: French, Arabic, English, emojis, and all other languages.
+        {t("templates.helpers.textUnicode")}
       </p>
     </div>
   );

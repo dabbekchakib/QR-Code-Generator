@@ -1,45 +1,62 @@
 import Link from "next/link";
-import { Globe, Wifi, Phone, Mail, MessageCircle, Contact, FileText, Zap, BarChart3, WifiOff, ArrowRight, QrCode, PlusCircle } from "lucide-react";
+import { cookies } from "next/headers";
+import {
+  Globe,
+  Wifi,
+  Phone,
+  Mail,
+  MessageCircle,
+  Contact,
+  FileText,
+  Zap,
+  BarChart3,
+  WifiOff,
+  ArrowRight,
+  QrCode,
+  PlusCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 import { HomeDynamicSections } from "./home-dynamic-sections";
+import { getTranslation } from "@/i18n/translations";
+import {
+  defaultLocale,
+  locales,
+  type Locale,
+} from "@/i18n/config";
 
-const qrTypes = [
-  { icon: Globe, name: "Website", desc: "Link to any website", color: "text-blue-500" },
-  { icon: Wifi, name: "WiFi", desc: "Share your WiFi", color: "text-purple-500" },
-  { icon: Phone, name: "Phone", desc: "Clickable phone number", color: "text-green-500" },
-  { icon: Mail, name: "Email", desc: "Pre-filled email", color: "text-amber-500" },
-  { icon: MessageCircle, name: "WhatsApp", desc: "Direct WhatsApp link", color: "text-emerald-500" },
-  { icon: Contact, name: "vCard", desc: "Contact card", color: "text-cyan-500" },
-  { icon: FileText, name: "Text", desc: "Text message", color: "text-rose-500" },
+// The homepage is a server component on purpose (zero client JS on the landing
+// page). Copy comes from the same dictionaries as the client app, selected at
+// render time from the persisted locale cookie — the same one I18nProvider
+// writes and RootLayout reads for <html lang/dir>.
+const qrTypeList = [
+  { id: "website", icon: Globe, color: "text-blue-500" },
+  { id: "wifi", icon: Wifi, color: "text-purple-500" },
+  { id: "phone", icon: Phone, color: "text-green-500" },
+  { id: "email", icon: Mail, color: "text-amber-500" },
+  { id: "whatsapp", icon: MessageCircle, color: "text-emerald-500" },
+  { id: "vcard", icon: Contact, color: "text-cyan-500" },
+  { id: "text", icon: FileText, color: "text-rose-500" },
 ];
 
-const features = [
-  {
-    icon: QrCode,
-    title: "Static QR Codes",
-    desc: "Create permanent QR codes for your links, contacts and information.",
-  },
-  {
-    icon: Zap,
-    title: "Dynamic QR Codes",
-    desc: "Change your QR code content without creating new ones.",
-  },
-  {
-    icon: BarChart3,
-    title: "Analytics",
-    desc: "Track scans and understand your QR code usage.",
-  },
-  {
-    icon: WifiOff,
-    title: "PWA / Offline",
-    desc: "Use the app even without an internet connection.",
-  },
+const featureList = [
+  { key: "static", icon: QrCode },
+  { key: "dynamic", icon: Zap },
+  { key: "analytics", icon: BarChart3 },
+  { key: "pwa", icon: WifiOff },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const cookieStore = await cookies();
+  const stored = cookieStore.get("qr-manager-locale")?.value;
+  const locale: Locale =
+    stored && locales.includes(stored as Locale)
+      ? (stored as Locale)
+      : defaultLocale;
+  const t = (path: string) => getTranslation(locale, path);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -48,11 +65,11 @@ export default function HomePage() {
           <Logo size="sm" />
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" render={<Link href="/login" />} nativeButton={false}>
-              Login
+              {t("common.login")}
             </Button>
             <Button size="sm" render={<Link href="/create" />} nativeButton={false}>
               <PlusCircle className="size-4" />
-              Create QR
+              {t("common.createQR")}
             </Button>
           </div>
         </div>
@@ -63,7 +80,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 sm:pt-32 pb-16 sm:pb-24 text-center relative">
           <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-xs">
-            100% Free &bull; No subscriptions &bull; No ads
+            {t("home.freeBanner")}
           </Badge>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-foreground mb-4">
@@ -71,21 +88,21 @@ export default function HomePage() {
           </h1>
 
           <p className="text-xl sm:text-2xl text-primary font-semibold mb-6">
-            Create. Customize. Share.
+            {t("home.heroSubtitle")}
           </p>
 
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
-            Create, customize and manage QR Codes from one simple, free application.
+            {t("home.heroDescription")}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button size="lg" className="w-full sm:w-auto" render={<Link href="/create" />} nativeButton={false}>
               <QrCode className="size-5" />
-              Create QR
+              {t("home.createQR")}
               <ArrowRight className="size-4" />
             </Button>
             <Button size="lg" variant="outline" className="w-full sm:w-auto" render={<Link href="/qrs" />} nativeButton={false}>
-              My QR Codes
+              {t("home.myQRCodes")}
             </Button>
           </div>
         </div>
@@ -96,17 +113,17 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
-              QR Code Types
+              {t("home.typesTitle")}
             </h2>
             <p className="text-muted-foreground">
-              Create different types of QR Codes for your needs
+              {t("home.typesSubtitle")}
             </p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {qrTypes.map((type) => (
+            {qrTypeList.map((type) => (
               <Card
-                key={type.name}
+                key={type.id}
                 className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/20 hover:-translate-y-0.5"
               >
                 <CardContent className="p-5 flex flex-col items-center text-center gap-3">
@@ -114,8 +131,8 @@ export default function HomePage() {
                     <type.icon className="size-6" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm">{type.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">{type.desc}</p>
+                    <h3 className="font-semibold text-sm">{t(`qrTypes.${type.id}.name`)}</h3>
+                    <p className="text-xs text-muted-foreground mt-1">{t(`qrTypes.${type.id}.desc`)}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -127,8 +144,8 @@ export default function HomePage() {
                   <PlusCircle className="size-6" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">More Soon</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Coming in next phases</p>
+                  <h3 className="font-semibold text-sm">{t("home.moreSoonTitle")}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{t("home.moreSoonSubtitle")}</p>
                 </div>
               </CardContent>
             </Card>
@@ -141,26 +158,26 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">
-              Everything You Need
+              {t("home.featuresTitle")}
             </h2>
             <p className="text-muted-foreground">
-              QR Manager combines power and simplicity
+              {t("home.featuresSubtitle")}
             </p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-6">
-            {features.map((feature) => (
-              <Card key={feature.title} className="transition-all hover:shadow-md">
+            {featureList.map((feature) => (
+              <Card key={feature.key} className="transition-all hover:shadow-md">
                 <CardContent className="p-6 flex gap-4">
                   <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
                     <feature.icon className="size-6" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground mb-1">
-                      {feature.title}
+                      {t(`features.${feature.key}Title`)}
                     </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      {feature.desc}
+                      {t(`features.${feature.key}Desc`)}
                     </p>
                   </div>
                 </CardContent>
@@ -177,14 +194,14 @@ export default function HomePage() {
       <section className="py-16 sm:py-24 border-t border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
-            Start Creating QR Codes
+            {t("home.ctaTitle")}
           </h2>
           <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-            Free forever. No subscriptions. No ads. No limits.
+            {t("home.ctaSubtitle")}
           </p>
           <Button size="lg" render={<Link href="/create" />} nativeButton={false}>
             <QrCode className="size-5" />
-            Create Your First QR
+            {t("home.createFirstQr")}
             <ArrowRight className="size-4" />
           </Button>
         </div>
@@ -195,11 +212,21 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <Logo size="sm" showText={false} />
           <p className="text-sm text-muted-foreground">
-            100% Free &bull; No subscriptions &bull; No ads
+            {t("home.freeBanner")}
           </p>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Link href="/settings" className="hover:text-foreground transition-colors">Settings</Link>
-            <Link href="/login" className="hover:text-foreground transition-colors">Login</Link>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">
+              {t("common.privacyPolicy")}
+            </Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">
+              {t("common.termsOfUse")}
+            </Link>
+            <Link href="/settings" className="hover:text-foreground transition-colors">
+              {t("common.settings")}
+            </Link>
+            <Link href="/login" className="hover:text-foreground transition-colors">
+              {t("common.login")}
+            </Link>
           </div>
         </div>
       </footer>

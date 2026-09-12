@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/i18n/provider";
 import type { EmailValues } from "../../types";
 
 interface EmailFormProps {
@@ -10,16 +11,18 @@ interface EmailFormProps {
 }
 
 export function EmailForm({ values, onChange, errors }: EmailFormProps) {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <label htmlFor="qr-email" className="text-sm font-medium">
-          Email Address <span className="text-destructive">*</span>
+          {t("templates.fields.email")} <span className="text-destructive">*</span>
         </label>
         <Input
           id="qr-email"
           type="email"
-          placeholder="you@example.com"
+          placeholder={t("templates.placeholders.email")}
           value={values.email}
           onChange={(e) => onChange({ ...values, email: e.target.value })}
           aria-invalid={!!errors?.email}
@@ -34,11 +37,11 @@ export function EmailForm({ values, onChange, errors }: EmailFormProps) {
 
       <div className="space-y-2">
         <label htmlFor="qr-email-subject" className="text-sm font-medium">
-          Subject
+          {t("templates.fields.subject")}
         </label>
         <Input
           id="qr-email-subject"
-          placeholder="Hello!"
+          placeholder={t("templates.placeholders.subject")}
           value={values.subject}
           onChange={(e) => onChange({ ...values, subject: e.target.value })}
         />
@@ -46,11 +49,11 @@ export function EmailForm({ values, onChange, errors }: EmailFormProps) {
 
       <div className="space-y-2">
         <label htmlFor="qr-email-message" className="text-sm font-medium">
-          Message
+          {t("templates.fields.message")}
         </label>
         <textarea
           id="qr-email-message"
-          placeholder="Your message..."
+          placeholder={t("templates.placeholders.message")}
           rows={3}
           value={values.message}
           onChange={(e) => onChange({ ...values, message: e.target.value })}

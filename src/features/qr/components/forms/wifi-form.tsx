@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/i18n/provider";
 import type { WiFiValues } from "../../types";
 
 interface WiFiFormProps {
@@ -10,15 +11,17 @@ interface WiFiFormProps {
 }
 
 export function WiFiForm({ values, onChange, errors }: WiFiFormProps) {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <label htmlFor="qr-ssid" className="text-sm font-medium">
-          Network Name (SSID) <span className="text-destructive">*</span>
+          {t("templates.fields.ssid")} <span className="text-destructive">*</span>
         </label>
         <Input
           id="qr-ssid"
-          placeholder="MyWiFiNetwork"
+          placeholder={t("templates.placeholders.ssid")}
           value={values.ssid}
           onChange={(e) => onChange({ ...values, ssid: e.target.value })}
           aria-invalid={!!errors?.ssid}
@@ -33,7 +36,7 @@ export function WiFiForm({ values, onChange, errors }: WiFiFormProps) {
 
       <div className="space-y-2">
         <label htmlFor="qr-wifi-security" className="text-sm font-medium">
-          Security
+          {t("templates.fields.security")}
         </label>
         <select
           id="qr-wifi-security"
@@ -46,21 +49,21 @@ export function WiFiForm({ values, onChange, errors }: WiFiFormProps) {
           }
           className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base md:text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <option value="WPA">WPA / WPA2</option>
-          <option value="WEP">WEP</option>
-          <option value="none">None (Open network)</option>
+          <option value="WPA">{t("templates.fields.securityWPA")}</option>
+          <option value="WEP">{t("templates.fields.securityWEP")}</option>
+          <option value="none">{t("templates.fields.securityNone")}</option>
         </select>
       </div>
 
       {values.security !== "none" && (
         <div className="space-y-2">
           <label htmlFor="qr-wifi-password" className="text-sm font-medium">
-            Password <span className="text-destructive">*</span>
+            {t("templates.fields.password")} <span className="text-destructive">*</span>
           </label>
           <Input
             id="qr-wifi-password"
             type="password"
-            placeholder="Enter password"
+            placeholder={t("templates.placeholders.wifiPassword")}
             value={values.password}
             onChange={(e) => onChange({ ...values, password: e.target.value })}
             aria-invalid={!!errors?.password}
@@ -84,7 +87,7 @@ export function WiFiForm({ values, onChange, errors }: WiFiFormProps) {
           )}
           role="switch"
           aria-checked={values.hidden}
-          aria-label="Hidden network"
+          aria-label={t("templates.fields.hidden")}
         >
           <span
             className={cn(
@@ -94,8 +97,10 @@ export function WiFiForm({ values, onChange, errors }: WiFiFormProps) {
           />
         </button>
         <div>
-          <p className="text-sm font-medium">Hidden network</p>
-          <p className="text-xs text-muted-foreground">SSID is not broadcast</p>
+          <p className="text-sm font-medium">{t("templates.fields.hidden")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("templates.helpers.wifiHidden")}
+          </p>
         </div>
       </div>
     </div>
